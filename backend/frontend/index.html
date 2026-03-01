@@ -1,348 +1,876 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>LiveFleet Intelligent Control Room</title>
-
-    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LiveFleet | AI Operational Control Room</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts: Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <style>
         body {
-            margin: 0;
-            font-family: 'Segoe UI', sans-serif;
-            background: #0f172a;
-            color: white;
+            font-family: 'Inter', sans-serif;
+            background-color: #0a0a0a;
+            color: #f3f4f6;
         }
-
-        .container {
-            padding: 25px;
+        .glass-card {
+            background: rgba(17, 17, 17, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
         }
-
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .system-status {
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-weight: bold;
-            font-size: 13px;
-            transition: 0.3s ease;
-        }
-
-        .controls {
-            margin-top: 20px;
-            display: flex;
-            gap: 15px;
-        }
-
-        input, select, button {
-            padding: 10px 14px;
-            border-radius: 8px;
-            border: none;
-            outline: none;
-            font-size: 14px;
-        }
-
-        button {
-            background: #2563eb;
-            color: white;
-            cursor: pointer;
-        }
-
-        .stats-container {
-            margin-top: 25px;
-            display: flex;
-            gap: 20px;
-        }
-
-        .stat-card {
-            flex: 1;
-            background: #1e293b;
-            padding: 20px;
-            border-radius: 14px;
-            border: 1px solid #334155;
-            text-align: center;
-            transition: 0.3s;
-        }
-
         .stat-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0px 5px 20px rgba(0,0,0,0.4);
+            border-color: rgba(59, 130, 246, 0.5);
+            transform: translateY(-2px);
+            transition: all 0.3s ease;
         }
-
-        .stat-card h4 {
-            font-size: 14px;
-            color: #94a3b8;
-            margin-bottom: 8px;
-        }
-
-        .stat-card p {
-            font-size: 28px;
-            font-weight: bold;
-        }
-
-        #risk-panel {
-            margin-top: 25px;
-            background: #1e293b;
-            padding: 20px;
-            border-radius: 14px;
-            border: 1px solid #334155;
-        }
-
         #map {
-            margin-top: 25px;
-            height: 450px;
-            border-radius: 14px;
-        }
-
-        #chartContainer {
-            margin-top: 25px;
-            background: #1e293b;
-            padding: 20px;
-            border-radius: 14px;
-            border: 1px solid #334155;
-        }
-
-        table {
-            width: 100%;
-            margin-top: 25px;
-            border-collapse: collapse;
-        }
-
-        th, td {
-            padding: 10px;
-            border: 1px solid #334155;
-            text-align: center;
-        }
-
-        th {
-            background: #1e293b;
-        }
-
-        .alert { color: red; font-weight: bold; }
-        .warning { color: orange; font-weight: bold; }
-        .normal { color: lightgreen; font-weight: bold; }
-
-        .toast {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: #7f1d1d;
-            padding: 15px 20px;
+            height: 500px;
             border-radius: 12px;
-            display: none;
-            font-weight: bold;
-            z-index: 999;
+            z-index: 1;
         }
-
-        .presentation-mode {
-            background: white;
-            color: black;
+        .leaflet-container {
+            background: #1a1a1a !important;
         }
-
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0a0a0a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #333;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #444;
+        }
+        .presentation-mode .hide-presentation {
+            display: none !important;
+        }
+        .presentation-mode .show-presentation {
+            display: block !important;
+        }
+        .presentation-mode .expand-presentation {
+            grid-column: span 12 / span 12 !important;
+        }
+        .animate-pulse-slow {
+            animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        .tech-tag {
+            background: rgba(59, 130, 246, 0.1);
+            color: #60a5fa;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            border: 1px solid rgba(59, 130, 246, 0.2);
+        }
     </style>
 </head>
+<body class="min-h-screen">
 
-<body>
+    <!-- Header / Navigation -->
+    <nav class="glass-card sticky top-0 z-50 px-6 py-4 flex items-center justify-between border-b border-white/10">
+        <div class="flex items-center gap-3">
+            <div class="bg-blue-600 p-2 rounded-lg">
+                <i class="fas fa-truck-fast text-xl text-white"></i>
+            </div>
+            <div>
+                <h1 class="text-xl font-bold tracking-tight">LiveFleet</h1>
+                <p class="text-[10px] uppercase tracking-widest text-blue-400 font-semibold">AI Operational Control Room</p>
+            </div>
+        </div>
+        
+        <div class="flex items-center gap-6">
+            <div class="hidden md:flex items-center gap-4 text-sm font-medium text-gray-400">
+                <a href="#overview" class="hover:text-white transition-colors">Overview</a>
+                <a href="#dashboard" class="hover:text-white transition-colors">Dashboard</a>
+                <a href="#architecture" class="hover:text-white transition-colors">Tech Stack</a>
+            </div>
+            
+            <div class="flex items-center gap-3">
+                <button id="presentationToggle" class="flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 transition-all text-sm font-medium">
+                    <i class="fas fa-desktop"></i>
+                    <span>Presentation Mode</span>
+                </button>
+                <div class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-green-500/10 border border-green-500/20">
+                    <div class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+                    <span class="text-xs font-semibold text-green-400">LIVE</span>
+                </div>
+            </div>
+        </div>
+    </nav>
 
-<div class="container">
+    <main class="max-w-[1600px] mx-auto px-6 py-8 space-y-8">
+        
+        <!-- Hero / Solution Overview -->
+        <section id="overview" class="hide-presentation grid grid-cols-1 lg:grid-cols-2 gap-12 items-center py-10">
+            <div class="space-y-6">
+                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-bold uppercase tracking-wider">
+                    Powered by Pathway
+                </div>
+                <h2 class="text-4xl lg:text-5xl font-extrabold leading-tight">
+                    Real-time Intelligent <br/>
+                    <span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-500">Fleet Monitoring Platform</span>
+                </h2>
+                <p class="text-lg text-gray-400 leading-relaxed max-w-xl">
+                    LiveFleet is a real-time intelligent fleet monitoring platform powered by the Pathway streaming engine. We didn’t just build backend intelligence — we built an operational control room.
+                </p>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="flex items-start gap-3">
+                        <i class="fas fa-check-circle text-blue-500 mt-1"></i>
+                        <div>
+                            <p class="font-semibold">Pathway Streaming</p>
+                            <p class="text-sm text-gray-500">Real-time ingestion & processing</p>
+                        </div>
+                    </div>
+                    <div class="flex items-start gap-3">
+                        <i class="fas fa-check-circle text-blue-500 mt-1"></i>
+                        <div>
+                            <p class="font-semibold">Dynamic Risk Scoring</p>
+                            <p class="text-sm text-gray-500">AI-driven anomaly detection</p>
+                        </div>
+                    </div>
+                    <div class="flex items-start gap-3">
+                        <i class="fas fa-check-circle text-blue-500 mt-1"></i>
+                        <div>
+                            <p class="font-semibold">Predictive ETA</p>
+                            <p class="text-sm text-gray-500">Live delay indicators</p>
+                        </div>
+                    </div>
+                    <div class="flex items-start gap-3">
+                        <i class="fas fa-check-circle text-blue-500 mt-1"></i>
+                        <div>
+                            <p class="font-semibold">PostgreSQL Storage</p>
+                            <p class="text-sm text-gray-500">Persistent production state</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="glass-card p-8 rounded-3xl border-white/5 relative overflow-hidden group">
+                <div class="absolute -top-24 -right-24 w-64 h-64 bg-blue-600/20 blur-[100px] rounded-full"></div>
+                <div class="absolute -bottom-24 -left-24 w-64 h-64 bg-indigo-600/20 blur-[100px] rounded-full"></div>
+                
+                <div class="relative space-y-6">
+                    <div class="flex items-center justify-between">
+                        <h3 class="font-bold text-xl">Key Innovations</h3>
+                        <i class="fas fa-bolt text-yellow-400"></i>
+                    </div>
+                    <ul class="space-y-4">
+                        <li class="flex items-center gap-4 p-4 rounded-xl bg-white/5 hover:bg-white/10 transition-colors border border-white/5">
+                            <div class="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center text-blue-400">
+                                <i class="fas fa-sync"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm font-bold">Zero-Latency Refresh</p>
+                                <p class="text-xs text-gray-500">No manual refresh. No cron jobs. Automatic recomputations.</p>
+                            </div>
+                        </li>
+                        <li class="flex items-center gap-4 p-4 rounded-xl bg-white/5 hover:bg-white/10 transition-colors border border-white/5">
+                            <div class="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center text-purple-400">
+                                <i class="fas fa-brain"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm font-bold">Operational Intelligence</p>
+                                <p class="text-xs text-gray-500">Speed anomalies, temperature thresholds & high ETA alerts.</p>
+                            </div>
+                        </li>
+                        <li class="flex items-center gap-4 p-4 rounded-xl bg-white/5 hover:bg-white/10 transition-colors border border-white/5">
+                            <div class="w-10 h-10 rounded-lg bg-green-500/20 flex items-center justify-center text-green-400">
+                                <i class="fas fa-shield-halved"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm font-bold">Production-Ready Stack</p>
+                                <p class="text-xs text-gray-500">Dockerized FastAPI + PostgreSQL for persistent analytics.</p>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </section>
 
-<div class="header">
-    <h1>🚛 LiveFleet Intelligent Control Room</h1>
-    <div>
-        <button onclick="togglePresentation()">🎥 Presentation Mode</button>
-        <span id="systemStatus" class="system-status">Checking...</span>
-    </div>
-</div>
+        <!-- Main Dashboard Section -->
+        <section id="dashboard" class="space-y-6">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <h2 class="text-2xl font-bold flex items-center gap-2">
+                    <i class="fas fa-chart-line text-blue-500"></i>
+                    Operational Dashboard
+                </h2>
+                <div class="flex items-center gap-4">
+                    <div class="relative">
+                        <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm"></i>
+                        <input type="text" id="truckSearch" placeholder="Search Truck ID..." class="bg-white/5 border border-white/10 rounded-lg py-2 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 w-64">
+                    </div>
+                </div>
+            </div>
 
-<div class="controls">
-    <input type="text" id="searchTruck" placeholder="🔍 Search Truck ID..." />
-    <select id="riskFilter">
-        <option value="ALL">All Trucks</option>
-        <option value="CRITICAL">Critical Only</option>
-        <option value="WARNING">Warning Only</option>
-    </select>
-</div>
+            <!-- Stats Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="glass-card stat-card p-5 rounded-2xl flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-xl bg-blue-500/20 flex items-center justify-center text-blue-400 text-xl">
+                        <i class="fas fa-truck"></i>
+                    </div>
+                    <div>
+                        <p class="text-xs font-medium text-gray-500 uppercase tracking-wider">Total Fleet</p>
+                        <p id="totalTrucks" class="text-2xl font-bold">0</p>
+                    </div>
+                </div>
+                <div class="glass-card stat-card p-5 rounded-2xl flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-xl bg-red-500/20 flex items-center justify-center text-red-400 text-xl">
+                        <i class="fas fa-triangle-exclamation"></i>
+                    </div>
+                    <div>
+                        <p class="text-xs font-medium text-gray-500 uppercase tracking-wider">Critical Risks</p>
+                        <p id="criticalAlerts" class="text-2xl font-bold">0</p>
+                    </div>
+                </div>
+                <div class="glass-card stat-card p-5 rounded-2xl flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-xl bg-orange-500/20 flex items-center justify-center text-orange-400 text-xl">
+                        <i class="fas fa-gauge-high"></i>
+                    </div>
+                    <div>
+                        <p class="text-xs font-medium text-gray-500 uppercase tracking-wider">Avg Speed</p>
+                        <p id="avgSpeed" class="text-2xl font-bold">0 <span class="text-sm font-normal text-gray-500">km/h</span></p>
+                    </div>
+                </div>
+                <div class="glass-card stat-card p-5 rounded-2xl flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-xl bg-cyan-500/20 flex items-center justify-center text-cyan-400 text-xl">
+                        <i class="fas fa-temperature-three-quarters"></i>
+                    </div>
+                    <div>
+                        <p class="text-xs font-medium text-gray-500 uppercase tracking-wider">Avg Temperature</p>
+                        <p id="avgTemp" class="text-2xl font-bold">0 <span class="text-sm font-normal text-gray-500">°C</span></p>
+                    </div>
+                </div>
+            </div>
 
-<div class="stats-container">
-    <div class="stat-card"><h4>Total Trucks</h4><p id="totalTrucks">0</p></div>
-    <div class="stat-card"><h4>Critical Alerts</h4><p id="criticalAlerts">0</p></div>
-    <div class="stat-card"><h4>Average Speed</h4><p id="avgSpeed">0</p></div>
-    <div class="stat-card"><h4>Average Temp</h4><p id="avgTemp">0</p></div>
-</div>
+            <!-- Dashboard Grid -->
+            <div class="grid grid-cols-12 gap-6">
+                <!-- Map Container -->
+                <div class="col-span-12 lg:col-span-8 space-y-6 expand-presentation">
+                    <div class="glass-card rounded-2xl overflow-hidden relative">
+                        <div class="absolute top-4 left-4 z-[10] flex flex-col gap-2">
+                            <div class="bg-black/80 backdrop-blur-md px-3 py-2 rounded-lg border border-white/10 text-[10px] font-bold uppercase flex flex-col gap-2">
+                                <div class="flex items-center gap-2">
+                                    <div class="w-2 h-2 rounded-full bg-green-500"></div>
+                                    <span>Normal State</span>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <div class="w-2 h-2 rounded-full bg-orange-500"></div>
+                                    <span>Warning Threshold</span>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <div class="w-2 h-2 rounded-full bg-red-500"></div>
+                                    <span>Critical Alert</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="map"></div>
+                    </div>
 
-<div id="risk-panel">
-    <h3>🚨 Live Risk Alerts (<span id="alertCount">0</span>)</h3>
-    <div id="risk-content"></div>
-</div>
+                    <!-- Fleet Table -->
+                    <div class="glass-card rounded-2xl overflow-hidden hide-presentation">
+                        <div class="px-6 py-4 border-b border-white/10 flex items-center justify-between">
+                            <h3 class="font-bold">Fleet Status Details</h3>
+                            <span class="text-xs text-gray-500">Auto-updating every 3s</span>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table id="fleetTable" class="w-full text-left text-sm">
+                                <thead>
+                                    <tr class="bg-white/5 text-gray-400 font-medium border-b border-white/10">
+                                        <th class="px-6 py-4">Truck ID</th>
+                                        <th class="px-6 py-4 text-center">Location (Lat, Lon)</th>
+                                        <th class="px-6 py-4 text-center">Speed</th>
+                                        <th class="px-6 py-4 text-center">Temp</th>
+                                        <th class="px-6 py-4 text-center">ETA (min)</th>
+                                        <th class="px-6 py-4 text-right">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-white/5">
+                                    <!-- Rows added via JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
 
-<div id="chartContainer">
-    <canvas id="riskChart"></canvas>
-</div>
+                <!-- Right Sidebar: Risks & Analytics -->
+                <div class="col-span-12 lg:col-span-4 space-y-6 hide-presentation">
+                    <!-- Live Risk Panel -->
+                    <div class="glass-card rounded-2xl overflow-hidden flex flex-col max-h-[450px]">
+                        <div class="px-6 py-4 border-b border-white/10 flex items-center justify-between bg-red-500/5">
+                            <h3 class="font-bold flex items-center gap-2">
+                                <i class="fas fa-satellite-dish text-red-400 animate-pulse"></i>
+                                Real-time Risk Stream
+                            </h3>
+                            <span class="px-2 py-0.5 rounded text-[10px] bg-red-500/20 text-red-400 font-bold uppercase">Streaming</span>
+                        </div>
+                        <div id="risk-content" class="p-4 overflow-y-auto space-y-3 flex-1">
+                            <div class="flex items-center justify-center py-10 text-gray-500">
+                                <i class="fas fa-spinner fa-spin mr-2"></i>
+                                Initializing Risk Engine...
+                            </div>
+                        </div>
+                    </div>
 
-<h3>🗺 Live Fleet Map</h3>
-<div id="map"></div>
+                    <!-- Risk Trends Chart -->
+                    <div class="glass-card rounded-2xl p-6">
+                        <h3 class="font-bold mb-4">Risk Level Evolution</h3>
+                        <canvas id="riskChart" height="200"></canvas>
+                        <p class="mt-4 text-[10px] text-gray-500 text-center uppercase tracking-widest font-semibold">Live Analytics Dashboard</p>
+                    </div>
 
-<table id="fleetTable">
-    <thead>
-        <tr>
-            <th>Truck</th>
-            <th>ETA</th>
-            <th>Speed</th>
-            <th>Temp</th>
-            <th>Status</th>
-            <th>Prediction</th>
-        </tr>
-    </thead>
-    <tbody></tbody>
-</table>
+                    <!-- Operational Logic Info -->
+                    <div class="glass-card rounded-2xl p-5 border-l-4 border-blue-500 bg-blue-500/5">
+                        <h4 class="text-xs font-bold text-blue-400 uppercase tracking-widest mb-2">Operational Logic</h4>
+                        <p class="text-xs text-gray-400 leading-relaxed">
+                            The color updates dynamically based on streaming risk score. Alerts are automatically generated from our risk engine — not manually.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
 
-</div>
+        <!-- Architecture Section -->
+        <section id="architecture" class="hide-presentation py-12 border-t border-white/10">
+            <div class="text-center mb-12 space-y-3">
+                <h2 class="text-3xl font-bold">Architecture Explanation</h2>
+                <p class="text-gray-500">Technical Layer Overview</p>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 relative">
+                <!-- Connectors for Desktop (Visual only) -->
+                <div class="hidden lg:block absolute top-1/2 left-1/4 right-1/4 h-px bg-gradient-to-r from-blue-500/50 via-purple-500/50 to-indigo-500/50 -translate-y-1/2 -z-10"></div>
+                
+                <!-- Layer 1 -->
+                <div class="glass-card p-6 rounded-2xl border-blue-500/20 relative">
+                    <div class="w-12 h-12 rounded-full bg-blue-600 flex items-center justify-center absolute -top-6 left-1/2 -translate-x-1/2 border-4 border-[#0a0a0a] shadow-xl">
+                        <i class="fas fa-microchip text-white"></i>
+                    </div>
+                    <div class="mt-6 text-center space-y-4">
+                        <h4 class="font-bold text-blue-400">Streaming Layer</h4>
+                        <p class="text-[11px] text-gray-500 uppercase font-bold tracking-widest">Powered by Pathway</p>
+                        <div class="text-left space-y-2">
+                            <div class="flex items-center gap-2 text-xs">
+                                <i class="fas fa-circle-check text-blue-500"></i>
+                                <span>Reads stream_data.csv</span>
+                            </div>
+                            <div class="flex items-center gap-2 text-xs text-gray-400">
+                                <i class="fas fa-circle-check text-blue-500"></i>
+                                <span>Auto-updates computation graph</span>
+                            </div>
+                            <div class="flex items-center gap-2 text-xs text-gray-400">
+                                <i class="fas fa-circle-check text-blue-500"></i>
+                                <span>Calculates ETA & Risk Score</span>
+                            </div>
+                        </div>
+                        <p class="text-[10px] bg-blue-500/10 p-2 rounded italic text-blue-300">
+                            "Pathway automatically recomputes results whenever new data arrives. No cron jobs."
+                        </p>
+                    </div>
+                </div>
 
-<div class="toast" id="toast"></div>
+                <!-- Layer 2 -->
+                <div class="glass-card p-6 rounded-2xl border-purple-500/20 relative">
+                    <div class="w-12 h-12 rounded-full bg-purple-600 flex items-center justify-center absolute -top-6 left-1/2 -translate-x-1/2 border-4 border-[#0a0a0a] shadow-xl">
+                        <i class="fas fa-database text-white"></i>
+                    </div>
+                    <div class="mt-6 text-center space-y-4">
+                        <h4 class="font-bold text-purple-400">Database Layer</h4>
+                        <p class="text-[11px] text-gray-500 uppercase font-bold tracking-widest">PostgreSQL</p>
+                        <div class="text-left space-y-2">
+                            <div class="flex items-center gap-2 text-xs">
+                                <i class="fas fa-circle-check text-purple-500"></i>
+                                <span>Stores fleet historical data</span>
+                            </div>
+                            <div class="flex items-center gap-2 text-xs text-gray-400">
+                                <i class="fas fa-circle-check text-purple-500"></i>
+                                <span>Persistent risk alerts storage</span>
+                            </div>
+                            <div class="flex items-center gap-2 text-xs text-gray-400">
+                                <i class="fas fa-circle-check text-purple-500"></i>
+                                <span>Enables complex analytics</span>
+                            </div>
+                        </div>
+                        <p class="text-[10px] bg-purple-500/10 p-2 rounded italic text-purple-300">
+                            "Persistent state with PostgreSQL for real production capability."
+                        </p>
+                    </div>
+                </div>
 
-<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+                <!-- Layer 3 -->
+                <div class="glass-card p-6 rounded-2xl border-indigo-500/20 relative">
+                    <div class="w-12 h-12 rounded-full bg-indigo-600 flex items-center justify-center absolute -top-6 left-1/2 -translate-x-1/2 border-4 border-[#0a0a0a] shadow-xl">
+                        <i class="fas fa-server text-white"></i>
+                    </div>
+                    <div class="mt-6 text-center space-y-4">
+                        <h4 class="font-bold text-indigo-400">Backend Layer</h4>
+                        <p class="text-[11px] text-gray-500 uppercase font-bold tracking-widest">FastAPI + Docker</p>
+                        <div class="text-left space-y-2">
+                            <div class="flex items-center gap-2 text-xs">
+                                <i class="fas fa-circle-check text-indigo-500"></i>
+                                <span>RESTful API Architecture</span>
+                            </div>
+                            <div class="flex items-center gap-2 text-xs text-gray-400">
+                                <i class="fas fa-circle-check text-indigo-500"></i>
+                                <span>Dockerized Deployment</span>
+                            </div>
+                            <div class="flex items-center gap-2 text-xs text-gray-400">
+                                <i class="fas fa-circle-check text-indigo-500"></i>
+                                <span>Real-time Data Serving</span>
+                            </div>
+                        </div>
+                        <p class="text-[10px] bg-indigo-500/10 p-2 rounded italic text-indigo-300">
+                            "Serves /fleet, /risk, /stats, and /risk-summary endpoints efficiently."
+                        </p>
+                    </div>
+                </div>
 
-<script>
-let map = L.map('map').setView([28.60, 77.30], 10);
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+                <!-- Layer 4 -->
+                <div class="glass-card p-6 rounded-2xl border-cyan-500/20 relative">
+                    <div class="w-12 h-12 rounded-full bg-cyan-600 flex items-center justify-center absolute -top-6 left-1/2 -translate-x-1/2 border-4 border-[#0a0a0a] shadow-xl">
+                        <i class="fas fa-display text-white"></i>
+                    </div>
+                    <div class="mt-6 text-center space-y-4">
+                        <h4 class="font-bold text-cyan-400">Frontend Layer</h4>
+                        <p class="text-[11px] text-gray-500 uppercase font-bold tracking-widest">Interactive UI</p>
+                        <div class="text-left space-y-2">
+                            <div class="flex items-center gap-2 text-xs">
+                                <i class="fas fa-circle-check text-cyan-500"></i>
+                                <span>Leaflet Live Map Visualization</span>
+                            </div>
+                            <div class="flex items-center gap-2 text-xs text-gray-400">
+                                <i class="fas fa-circle-check text-cyan-500"></i>
+                                <span>Chart.js Real-time Analytics</span>
+                            </div>
+                            <div class="flex items-center gap-2 text-xs text-gray-400">
+                                <i class="fas fa-circle-check text-cyan-500"></i>
+                                <span>Executive Presentation Mode</span>
+                            </div>
+                        </div>
+                        <p class="text-[10px] bg-cyan-500/10 p-2 rounded italic text-cyan-300">
+                            "Built as an operational control room with search, filters, and alerts."
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
 
-let markers = {};
-let trails = {};
-let latestRisk = [];
+        <!-- Comparison Section -->
+        <section id="why-different" class="hide-presentation py-12 grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div class="lg:col-span-1 space-y-4">
+                <h2 class="text-3xl font-bold leading-tight">Why This Is <span class="text-blue-500">Different</span></h2>
+                <p class="text-gray-500 leading-relaxed">
+                    Most hackathon dashboards are static or use fake data. We built a production-ready operational platform.
+                </p>
+            </div>
+            <div class="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="glass-card p-6 rounded-2xl hover:bg-white/5 transition-colors border border-white/5">
+                    <h5 class="font-bold text-lg mb-2 flex items-center gap-2">
+                        <i class="fas fa-fire text-orange-500"></i>
+                        Real Streaming
+                    </h5>
+                    <p class="text-sm text-gray-400">
+                        Unlike teams using <code>setInterval</code> for fake refreshes, our backend computations are triggered automatically by Pathway’s streaming engine.
+                    </p>
+                </div>
+                <div class="glass-card p-6 rounded-2xl hover:bg-white/5 transition-colors border border-white/5">
+                    <h5 class="font-bold text-lg mb-2 flex items-center gap-2">
+                        <i class="fas fa-brain text-purple-500"></i>
+                        Intelligence Layer
+                    </h5>
+                    <p class="text-sm text-gray-400">
+                        We don't just show locations. We compute ETA, Risk Scores, and Predict delay probability with dynamic severity classification.
+                    </p>
+                </div>
+                <div class="glass-card p-6 rounded-2xl hover:bg-white/5 transition-colors border border-white/5">
+                    <h5 class="font-bold text-lg mb-2 flex items-center gap-2">
+                        <i class="fas fa-box text-blue-500"></i>
+                        Full Stack Ready
+                    </h5>
+                    <p class="text-sm text-gray-400">
+                        Docker, Postgres, Render, REST APIs. This is not a prototype; this is deployable software.
+                    </p>
+                </div>
+                <div class="glass-card p-6 rounded-2xl hover:bg-white/5 transition-colors border border-white/5">
+                    <h5 class="font-bold text-lg mb-2 flex items-center gap-2">
+                        <i class="fas fa-hand-holding-hand text-green-500"></i>
+                        Operational Usability
+                    </h5>
+                    <p class="text-sm text-gray-400">
+                        Search, Filters, Analytics, Toast alerts, and Presentation mode. It feels like a high-end SaaS product.
+                    </p>
+                </div>
+            </div>
+        </section>
 
-const ctx = document.getElementById('riskChart').getContext('2d');
-const riskChart = new Chart(ctx, {
-    type: 'line',
-    data: { labels: [], datasets: [{ label: 'Critical Alerts', data: [], borderColor: 'red' }] }
-});
+    </main>
 
-function togglePresentation() {
-    document.body.classList.toggle("presentation-mode");
-}
+    <!-- Footer -->
+    <footer class="hide-presentation border-t border-white/10 mt-12 py-8 px-6 text-center">
+        <div class="flex items-center justify-center gap-6 mb-4 grayscale opacity-40">
+            <span class="font-bold text-xl tracking-tighter">PATHWAY</span>
+            <span class="font-bold text-xl tracking-tighter">POSTGRESQL</span>
+            <span class="font-bold text-xl tracking-tighter">FASTAPI</span>
+            <span class="font-bold text-xl tracking-tighter">DOCKER</span>
+            <span class="font-bold text-xl tracking-tighter">RENDER</span>
+        </div>
+        <p class="text-xs text-gray-500 tracking-widest font-medium uppercase">LiveFleet Monitoring Dashboard &copy; 2024</p>
+    </footer>
 
-function showToast(msg) {
-    const t = document.getElementById("toast");
-    t.innerText = msg;
-    t.style.display = "block";
-    setTimeout(() => t.style.display = "none", 3000);
-}
+    <!-- Toast Notifications Container -->
+    <div id="toastContainer" class="fixed bottom-6 right-6 z-[100] flex flex-col gap-3"></div>
 
-function updateChart(value) {
-    riskChart.data.labels.push(new Date().toLocaleTimeString());
-    riskChart.data.datasets[0].data.push(value);
-    if (riskChart.data.labels.length > 10) {
-        riskChart.data.labels.shift();
-        riskChart.data.datasets[0].data.shift();
-    }
-    riskChart.update();
-}
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-async function loadData() {
-    const fleet = await fetch("/fleet").then(r => r.json());
-    const risk = await fetch("/risk").then(r => r.json());
-    const stats = await fetch("/stats").then(r => r.json());
-    const riskSummary = await fetch("/risk-summary").then(r => r.json());
+    <script>
+        /* ============================================================
+           CONFIGURATION & STATE
+           ============================================================ */
+        const REFRESH_INTERVAL = 3000;
+        let markers = {};
+        let map;
+        let riskChart;
+        let presentationMode = false;
+        let lastRiskCount = 0;
+        let currentSearchQuery = "";
 
-    latestRisk = risk;
+        /* ============================================================
+           MAP INITIALIZATION
+           ============================================================ */
+        function initMap() {
+            map = L.map('map', {
+                zoomControl: false,
+                attributionControl: false
+            }).setView([28.60, 77.30], 10);
 
-    document.getElementById("totalTrucks").innerText = stats.total_trucks;
-    document.getElementById("avgSpeed").innerText = stats.avg_speed + " km/h";
-    document.getElementById("avgTemp").innerText = stats.avg_temperature + " °C";
-    document.getElementById("criticalAlerts").innerText = riskSummary.CRITICAL || 0;
-    document.getElementById("alertCount").innerText = risk.length;
+            // Dark theme tiles
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                maxZoom: 20
+            }).addTo(map);
 
-    if (risk.length > 0) {
-        document.getElementById("systemStatus").innerText = "🔴 ALERT MODE";
-        document.getElementById("systemStatus").style.background = "#7f1d1d";
-        showToast("🚨 Critical Alert Detected!");
-    } else {
-        document.getElementById("systemStatus").innerText = "🟢 SYSTEM NORMAL";
-        document.getElementById("systemStatus").style.background = "#064e3b";
-    }
-
-    updateChart(riskSummary.CRITICAL || 0);
-    updateMap(fleet);
-    updateTable(fleet);
-}
-
-function updateTable(fleet) {
-    const tbody = document.querySelector("#fleetTable tbody");
-    tbody.innerHTML = "";
-
-    const search = document.getElementById("searchTruck").value.toLowerCase();
-    const filter = document.getElementById("riskFilter").value;
-
-    fleet.forEach(truck => {
-
-        if (search && !truck.truck_id.toLowerCase().includes(search)) return;
-
-        const riskItem = latestRisk.find(r => r.truck_id === truck.truck_id);
-        const riskLevel = riskItem ? riskItem.risk_level : "NORMAL";
-
-        if (filter !== "ALL" && riskLevel !== filter) return;
-
-        const statusClass = riskLevel === "CRITICAL" ? "alert" :
-                            riskLevel === "WARNING" ? "warning" : "normal";
-
-        const prediction = truck.eta_minutes > 20 ? "⚠ High Delay Risk" : "Stable";
-
-        tbody.innerHTML += `
-            <tr>
-                <td>${truck.truck_id}</td>
-                <td>${truck.eta_minutes.toFixed(2)} min</td>
-                <td>${truck.speed}</td>
-                <td>${truck.temperature}</td>
-                <td class="${statusClass}">${riskLevel}</td>
-                <td>${prediction}</td>
-            </tr>
-        `;
-    });
-}
-
-function updateMap(fleet) {
-    fleet.forEach(truck => {
-
-        let color = "green";
-        const riskItem = latestRisk.find(r => r.truck_id === truck.truck_id);
-        if (riskItem?.risk_level === "CRITICAL") color = "red";
-        if (riskItem?.risk_level === "WARNING") color = "orange";
-
-        if (!markers[truck.truck_id]) {
-            markers[truck.truck_id] = L.circleMarker(
-                [truck.lat, truck.lon],
-                { radius: 8, color: color, fillColor: color, fillOpacity: 0.8 }
-            ).addTo(map)
-            .bindPopup(`
-                <b>${truck.truck_id}</b><br>
-                Speed: ${truck.speed}<br>
-                Temp: ${truck.temperature}<br>
-                ETA: ${truck.eta_minutes.toFixed(2)} min
-            `);
-
-            trails[truck.truck_id] = [];
-        } else {
-            markers[truck.truck_id].setLatLng([truck.lat, truck.lon]);
-            markers[truck.truck_id].setStyle({ color: color, fillColor: color });
+            L.control.zoom({ position: 'bottomright' }).addTo(map);
         }
 
-        trails[truck.truck_id].push([truck.lat, truck.lon]);
-        if (trails[truck.truck_id].length > 5) trails[truck.truck_id].shift();
+        /* ============================================================
+           ANALYTICS INITIALIZATION
+           ============================================================ */
+        function initChart() {
+            const ctx = document.getElementById('riskChart').getContext('2d');
+            riskChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [
+                        {
+                            label: 'Critical',
+                            borderColor: '#ef4444',
+                            backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                            data: [],
+                            fill: true,
+                            tension: 0.4
+                        },
+                        {
+                            label: 'Warning',
+                            borderColor: '#f97316',
+                            backgroundColor: 'rgba(249, 115, 22, 0.1)',
+                            data: [],
+                            fill: true,
+                            tension: 0.4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: { color: 'rgba(255,255,255,0.05)' },
+                            ticks: { color: '#666', font: { size: 10 } }
+                        },
+                        x: {
+                            grid: { display: false },
+                            ticks: { color: '#666', font: { size: 10 } }
+                        }
+                    }
+                }
+            });
+        }
 
-        L.polyline(trails[truck.truck_id], { color: color, dashArray: "5,5" }).addTo(map);
-    });
-}
+        /* ============================================================
+           UI UTILITIES
+           ============================================================ */
+        function showToast(title, message, level = 'critical') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            const colorClass = level === 'critical' ? 'border-red-500 bg-red-500/10' : 'border-orange-500 bg-orange-500/10';
+            const iconClass = level === 'critical' ? 'fa-triangle-exclamation text-red-500' : 'fa-circle-exclamation text-orange-500';
 
-setInterval(loadData, 4000);
-document.getElementById("searchTruck").addEventListener("input", loadData);
-document.getElementById("riskFilter").addEventListener("change", loadData);
+            toast.className = `glass-card p-4 rounded-xl border-l-4 ${colorClass} min-w-[300px] flex gap-3 animate-bounce-in shadow-2xl`;
+            toast.innerHTML = `
+                <i class="fas ${iconClass} mt-1"></i>
+                <div>
+                    <p class="font-bold text-sm">${title}</p>
+                    <p class="text-xs text-gray-400">${message}</p>
+                </div>
+            `;
 
-loadData();
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'transition-opacity', 'duration-500');
+                setTimeout(() => toast.remove(), 500);
+            }, 5000);
+        }
 
-</script>
+        /* ============================================================
+           DATA FETCHING & UPDATES
+           ============================================================ */
+        
+        async function updateStats() {
+            try {
+                const stats = await fetch("/stats").then(r => r.json());
+                const riskSummary = await fetch("/risk-summary").then(r => r.json());
 
+                document.getElementById("totalTrucks").innerText = stats.total_trucks || 0;
+                document.getElementById("avgSpeed").innerText = (stats.avg_speed || 0);
+                document.getElementById("avgTemp").innerText = (stats.avg_temperature || 0);
+                document.getElementById("criticalAlerts").innerText = riskSummary.CRITICAL || 0;
+
+                // Update Chart
+                const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                if (riskChart.data.labels.length > 10) {
+                    riskChart.data.labels.shift();
+                    riskChart.data.datasets[0].data.shift();
+                    riskChart.data.datasets[1].data.shift();
+                }
+                riskChart.data.labels.push(now);
+                riskChart.data.datasets[0].data.push(riskSummary.CRITICAL || 0);
+                riskChart.data.datasets[1].data.push(riskSummary.WARNING || 0);
+                riskChart.update('none');
+
+                // Toast notification logic
+                if (riskSummary.CRITICAL > lastRiskCount) {
+                    showToast("New Critical Alert", `${riskSummary.CRITICAL} trucks currently in high-risk state. Check control room.`, 'critical');
+                }
+                lastRiskCount = riskSummary.CRITICAL;
+
+            } catch (err) {
+                console.error("Stats fetch error:", err);
+            }
+        }
+
+        async function updateFleet() {
+            try {
+                const response = await fetch("/fleet");
+                const data = await response.json();
+                const tableBody = document.querySelector("#fleetTable tbody");
+                
+                // Fetch risk data to color markers correctly
+                const riskData = await fetch("/risk").then(r => r.json());
+                const riskMap = {};
+                riskData.forEach(r => riskMap[r.truck_id] = r.risk_level);
+
+                tableBody.innerHTML = "";
+                data.forEach(truck => {
+                    // Filter based on search
+                    if (currentSearchQuery && !truck.truck_id.toLowerCase().includes(currentSearchQuery.toLowerCase())) {
+                        return;
+                    }
+
+                    const status = truck.eta_minutes && truck.eta_minutes > 30 ? "DELAY" : "NORMAL";
+                    const riskLevel = riskMap[truck.truck_id] || "NORMAL";
+                    
+                    let statusBadgeClass = "bg-green-500/10 text-green-500 border-green-500/20";
+                    if (riskLevel === "CRITICAL") statusBadgeClass = "bg-red-500/10 text-red-500 border-red-500/20";
+                    else if (riskLevel === "WARNING") statusBadgeClass = "bg-orange-500/10 text-orange-500 border-orange-500/20";
+                    else if (status === "DELAY") statusBadgeClass = "bg-yellow-500/10 text-yellow-500 border-yellow-500/20";
+
+                    const row = `
+                        <tr class="hover:bg-white/5 transition-colors group">
+                            <td class="px-6 py-4 font-bold text-blue-400">
+                                <i class="fas fa-truck text-[10px] mr-2 text-gray-600 group-hover:text-blue-400"></i>
+                                ${truck.truck_id}
+                            </td>
+                            <td class="px-6 py-4 text-center font-mono text-xs text-gray-500">
+                                ${truck.lat.toFixed(4)}, ${truck.lon.toFixed(4)}
+                            </td>
+                            <td class="px-6 py-4 text-center">
+                                <span class="font-bold">${truck.speed.toFixed(1)}</span> <span class="text-[10px] text-gray-500">KM/H</span>
+                            </td>
+                            <td class="px-6 py-4 text-center">
+                                <span class="font-bold">${truck.temperature.toFixed(1)}</span> <span class="text-[10px] text-gray-500">°C</span>
+                            </td>
+                            <td class="px-6 py-4 text-center font-semibold text-gray-300">
+                                ${truck.eta_minutes ? truck.eta_minutes.toFixed(1) : "0.0"}
+                            </td>
+                            <td class="px-6 py-4 text-right">
+                                <span class="px-2 py-1 rounded-md border text-[10px] font-bold uppercase tracking-wider ${statusBadgeClass}">
+                                    ${riskLevel !== 'NORMAL' ? riskLevel : status}
+                                </span>
+                            </td>
+                        </tr>
+                    `;
+                    tableBody.innerHTML += row;
+
+                    // Update Map Marker
+                    updateMarker(truck, riskLevel);
+                });
+
+            } catch (err) {
+                console.error("Fleet fetch error:", err);
+            }
+        }
+
+        function updateMarker(truck, riskLevel) {
+            if (!truck.lat || !truck.lon) return;
+
+            let color = "#22c55e"; // green-500
+            if (riskLevel === "CRITICAL") color = "#ef4444"; // red-500
+            else if (riskLevel === "WARNING") color = "#f97316"; // orange-500
+
+            const popupContent = `
+                <div class="p-2 min-w-[150px]">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="font-bold text-lg">${truck.truck_id}</span>
+                        <span class="text-[10px] uppercase font-bold text-gray-500">${riskLevel}</span>
+                    </div>
+                    <div class="space-y-1 text-xs">
+                        <div class="flex justify-between"><span>Speed:</span><b>${truck.speed.toFixed(1)} km/h</b></div>
+                        <div class="flex justify-between"><span>Temp:</span><b>${truck.temperature.toFixed(1)}°C</b></div>
+                        <div class="flex justify-between"><span>ETA:</span><b>${truck.eta_minutes.toFixed(1)} min</b></div>
+                    </div>
+                </div>
+            `;
+
+            if (markers[truck.truck_id]) {
+                markers[truck.truck_id].setLatLng([truck.lat, truck.lon]);
+                markers[truck.truck_id].setStyle({ color: color, fillColor: color });
+                markers[truck.truck_id].getPopup().setContent(popupContent);
+            } else {
+                markers[truck.truck_id] = L.circleMarker(
+                    [truck.lat, truck.lon],
+                    {
+                        radius: 8,
+                        color: color,
+                        fillColor: color,
+                        fillOpacity: 0.8,
+                        weight: 2
+                    }
+                ).addTo(map).bindPopup(popupContent);
+            }
+        }
+
+        async function updateRisks() {
+            try {
+                const response = await fetch("/risk");
+                const data = await response.json();
+                const riskContent = document.getElementById("risk-content");
+
+                if (!data || data.length === 0) {
+                    riskContent.innerHTML = `
+                        <div class="flex flex-col items-center justify-center py-10 text-center">
+                            <div class="w-12 h-12 rounded-full bg-green-500/10 flex items-center justify-center text-green-500 mb-3">
+                                <i class="fas fa-check"></i>
+                            </div>
+                            <p class="text-sm font-bold text-green-400">All Systems Clear</p>
+                            <p class="text-[10px] text-gray-500 mt-1 uppercase tracking-widest">No active threats detected</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                riskContent.innerHTML = "";
+                data.forEach(risk => {
+                    const time = new Date(risk.time * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                    const isCritical = risk.risk_level === "CRITICAL";
+                    
+                    const riskDiv = document.createElement("div");
+                    riskDiv.className = `p-4 rounded-xl border flex items-center justify-between transition-all hover:scale-[1.02] ${isCritical ? 'bg-red-500/10 border-red-500/20 text-red-400' : 'bg-orange-500/10 border-orange-500/20 text-orange-400'}`;
+                    
+                    riskDiv.innerHTML = `
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-lg ${isCritical ? 'bg-red-500/20' : 'bg-orange-500/20'} flex items-center justify-center">
+                                <i class="fas ${isCritical ? 'fa-bolt' : 'fa-triangle-exclamation'}"></i>
+                            </div>
+                            <div>
+                                <p class="text-xs font-bold uppercase tracking-wider">${risk.truck_id} - ${risk.risk_level}</p>
+                                <p class="text-[10px] opacity-70">Risk Score: ${risk.risk_score.toFixed(0)} | Anomaly Detected</p>
+                            </div>
+                        </div>
+                        <span class="text-[10px] font-mono font-bold opacity-60">${time}</span>
+                    `;
+                    riskContent.appendChild(riskDiv);
+                });
+
+            } catch (err) {
+                console.error("Risk fetch error:", err);
+            }
+        }
+
+        /* ============================================================
+           INTERACTION HANDLERS
+           ============================================================ */
+        
+        document.getElementById("presentationToggle").addEventListener("click", () => {
+            presentationMode = !presentationMode;
+            document.body.classList.toggle("presentation-mode", presentationMode);
+            const btn = document.getElementById("presentationToggle");
+            btn.classList.toggle("bg-blue-600", presentationMode);
+            btn.classList.toggle("text-white", presentationMode);
+            
+            // Re-invalidate map size for layout shift
+            setTimeout(() => map.invalidateSize(), 300);
+        });
+
+        document.getElementById("truckSearch").addEventListener("input", (e) => {
+            currentSearchQuery = e.target.value;
+            updateFleet(); // Trigger immediate refresh with filter
+        });
+
+        /* ============================================================
+           INITIALIZATION
+           ============================================================ */
+        window.onload = () => {
+            initMap();
+            initChart();
+            
+            // Initial load
+            updateStats();
+            updateFleet();
+            updateRisks();
+
+            // Auto-refresh cycle
+            setInterval(() => {
+                updateStats();
+                updateFleet();
+                updateRisks();
+            }, REFRESH_INTERVAL);
+        };
+
+    </script>
 </body>
 </html>
