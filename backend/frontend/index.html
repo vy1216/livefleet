@@ -1,115 +1,186 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>LiveFleet Dashboard</title>
+    <title>LiveFleet Intelligent Control Room</title>
 
-    <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <style>
         body {
-            font-family: Arial, sans-serif;
-            background: #111;
+            margin: 0;
+            font-family: 'Segoe UI', sans-serif;
+            background: #0f172a;
             color: white;
-            padding: 20px;
         }
 
-        h1, h3 {
-            margin-bottom: 10px;
+        .container {
+            padding: 25px;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .system-status {
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 13px;
+            transition: 0.3s ease;
+        }
+
+        .controls {
+            margin-top: 20px;
+            display: flex;
+            gap: 15px;
+        }
+
+        input, select, button {
+            padding: 10px 14px;
+            border-radius: 8px;
+            border: none;
+            outline: none;
+            font-size: 14px;
+        }
+
+        button {
+            background: #2563eb;
+            color: white;
+            cursor: pointer;
         }
 
         .stats-container {
+            margin-top: 25px;
             display: flex;
             gap: 20px;
-            margin-bottom: 20px;
         }
 
         .stat-card {
             flex: 1;
-            background: #1b1b1b;
+            background: #1e293b;
             padding: 20px;
-            border-radius: 8px;
-            border: 1px solid #333;
+            border-radius: 14px;
+            border: 1px solid #334155;
             text-align: center;
+            transition: 0.3s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0px 5px 20px rgba(0,0,0,0.4);
         }
 
         .stat-card h4 {
-            color: #aaa;
-            margin-bottom: 10px;
             font-size: 14px;
+            color: #94a3b8;
+            margin-bottom: 8px;
         }
 
         .stat-card p {
-            font-size: 22px;
+            font-size: 28px;
             font-weight: bold;
         }
 
         #risk-panel {
-            margin-bottom: 20px;
-            padding: 15px;
-            background: #1b1b1b;
-            border: 1px solid #444;
-            border-radius: 8px;
+            margin-top: 25px;
+            background: #1e293b;
+            padding: 20px;
+            border-radius: 14px;
+            border: 1px solid #334155;
         }
 
         #map {
+            margin-top: 25px;
             height: 450px;
-            margin-bottom: 20px;
-            border-radius: 8px;
+            border-radius: 14px;
+        }
+
+        #chartContainer {
+            margin-top: 25px;
+            background: #1e293b;
+            padding: 20px;
+            border-radius: 14px;
+            border: 1px solid #334155;
         }
 
         table {
             width: 100%;
+            margin-top: 25px;
             border-collapse: collapse;
-            margin-top: 20px;
         }
 
         th, td {
             padding: 10px;
-            border: 1px solid #333;
+            border: 1px solid #334155;
             text-align: center;
         }
 
         th {
-            background: #222;
+            background: #1e293b;
         }
 
         .alert { color: red; font-weight: bold; }
+        .warning { color: orange; font-weight: bold; }
         .normal { color: lightgreen; font-weight: bold; }
 
-        .error {
-            color: red;
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #7f1d1d;
+            padding: 15px 20px;
+            border-radius: 12px;
+            display: none;
             font-weight: bold;
+            z-index: 999;
         }
+
+        .presentation-mode {
+            background: white;
+            color: black;
+        }
+
     </style>
 </head>
 
 <body>
 
-<h1>🚛 LiveFleet Monitoring Dashboard</h1>
+<div class="container">
 
-<div class="stats-container">
-    <div class="stat-card">
-        <h4>Total Trucks</h4>
-        <p id="totalTrucks">0</p>
-    </div>
-    <div class="stat-card">
-        <h4>Critical Alerts</h4>
-        <p id="criticalAlerts">0</p>
-    </div>
-    <div class="stat-card">
-        <h4>Average Speed</h4>
-        <p id="avgSpeed">0 km/h</p>
-    </div>
-    <div class="stat-card">
-        <h4>Average Temperature</h4>
-        <p id="avgTemp">0 °C</p>
+<div class="header">
+    <h1>🚛 LiveFleet Intelligent Control Room</h1>
+    <div>
+        <button onclick="togglePresentation()">🎥 Presentation Mode</button>
+        <span id="systemStatus" class="system-status">Checking...</span>
     </div>
 </div>
 
+<div class="controls">
+    <input type="text" id="searchTruck" placeholder="🔍 Search Truck ID..." />
+    <select id="riskFilter">
+        <option value="ALL">All Trucks</option>
+        <option value="CRITICAL">Critical Only</option>
+        <option value="WARNING">Warning Only</option>
+    </select>
+</div>
+
+<div class="stats-container">
+    <div class="stat-card"><h4>Total Trucks</h4><p id="totalTrucks">0</p></div>
+    <div class="stat-card"><h4>Critical Alerts</h4><p id="criticalAlerts">0</p></div>
+    <div class="stat-card"><h4>Average Speed</h4><p id="avgSpeed">0</p></div>
+    <div class="stat-card"><h4>Average Temp</h4><p id="avgTemp">0</p></div>
+</div>
+
 <div id="risk-panel">
-    <h3>🚨 Live Risk Alerts</h3>
-    <div id="risk-content">Loading...</div>
+    <h3>🚨 Live Risk Alerts (<span id="alertCount">0</span>)</h3>
+    <div id="risk-content"></div>
+</div>
+
+<div id="chartContainer">
+    <canvas id="riskChart"></canvas>
 </div>
 
 <h3>🗺 Live Fleet Map</h3>
@@ -119,188 +190,157 @@
     <thead>
         <tr>
             <th>Truck</th>
-            <th>ETA (min)</th>
+            <th>ETA</th>
             <th>Speed</th>
-            <th>Temperature</th>
+            <th>Temp</th>
             <th>Status</th>
+            <th>Prediction</th>
         </tr>
     </thead>
     <tbody></tbody>
 </table>
 
+</div>
+
+<div class="toast" id="toast"></div>
+
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
 <script>
-
-/* ===========================
-   MAP INIT
-=========================== */
 let map = L.map('map').setView([28.60, 77.30], 10);
-
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '© OpenStreetMap'
-}).addTo(map);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
 let markers = {};
+let trails = {};
+let latestRisk = [];
 
-/* ===========================
-   LOAD STATS
-=========================== */
-async function loadStats() {
-    try {
-        const stats = await fetch("/stats").then(r => r.json());
-        const riskSummary = await fetch("/risk-summary").then(r => r.json());
+const ctx = document.getElementById('riskChart').getContext('2d');
+const riskChart = new Chart(ctx, {
+    type: 'line',
+    data: { labels: [], datasets: [{ label: 'Critical Alerts', data: [], borderColor: 'red' }] }
+});
 
-        document.getElementById("totalTrucks").innerText = stats.total_trucks || 0;
-        document.getElementById("avgSpeed").innerText = (stats.avg_speed || 0) + " km/h";
-        document.getElementById("avgTemp").innerText = (stats.avg_temperature || 0) + " °C";
-        document.getElementById("criticalAlerts").innerText = riskSummary.CRITICAL || 0;
-
-    } catch (err) {
-        console.error("Stats error:", err);
-    }
+function togglePresentation() {
+    document.body.classList.toggle("presentation-mode");
 }
 
-/* ===========================
-   LOAD FLEET TABLE
-=========================== */
-async function loadFleet() {
-    try {
-        const response = await fetch("/fleet");
-        const data = await response.json();
-
-        const tableBody = document.querySelector("#fleetTable tbody");
-        tableBody.innerHTML = "";
-
-        data.forEach(row => {
-
-            const status = row.eta_minutes && row.eta_minutes > 30 ? "DELAY" : "NORMAL";
-            const statusClass = status === "DELAY" ? "alert" : "normal";
-
-            tableBody.innerHTML += `
-                <tr>
-                    <td>${row.truck_id}</td>
-                    <td>${row.eta_minutes ? row.eta_minutes.toFixed(2) : "0.00"}</td>
-                    <td>${row.speed}</td>
-                    <td>${row.temperature}</td>
-                    <td class="${statusClass}">${status}</td>
-                </tr>
-            `;
-        });
-
-    } catch (err) {
-        console.error("Fleet error:", err);
-    }
+function showToast(msg) {
+    const t = document.getElementById("toast");
+    t.innerText = msg;
+    t.style.display = "block";
+    setTimeout(() => t.style.display = "none", 3000);
 }
 
-/* ===========================
-   LOAD RISK ALERTS
-=========================== */
-async function loadRisk() {
-    try {
-        const response = await fetch("/risk");
-        const data = await response.json();
+function updateChart(value) {
+    riskChart.data.labels.push(new Date().toLocaleTimeString());
+    riskChart.data.datasets[0].data.push(value);
+    if (riskChart.data.labels.length > 10) {
+        riskChart.data.labels.shift();
+        riskChart.data.datasets[0].data.shift();
+    }
+    riskChart.update();
+}
 
-        const riskContent = document.getElementById("risk-content");
-        riskContent.innerHTML = "";
+async function loadData() {
+    const fleet = await fetch("/fleet").then(r => r.json());
+    const risk = await fetch("/risk").then(r => r.json());
+    const stats = await fetch("/stats").then(r => r.json());
+    const riskSummary = await fetch("/risk-summary").then(r => r.json());
 
-        if (!data || data.length === 0) {
-            riskContent.innerHTML = `
-                <div style="color:lightgreen; font-weight:bold;">
-                    ✅ No active risks detected.
-                </div>
-            `;
-            return;
+    latestRisk = risk;
+
+    document.getElementById("totalTrucks").innerText = stats.total_trucks;
+    document.getElementById("avgSpeed").innerText = stats.avg_speed + " km/h";
+    document.getElementById("avgTemp").innerText = stats.avg_temperature + " °C";
+    document.getElementById("criticalAlerts").innerText = riskSummary.CRITICAL || 0;
+    document.getElementById("alertCount").innerText = risk.length;
+
+    if (risk.length > 0) {
+        document.getElementById("systemStatus").innerText = "🔴 ALERT MODE";
+        document.getElementById("systemStatus").style.background = "#7f1d1d";
+        showToast("🚨 Critical Alert Detected!");
+    } else {
+        document.getElementById("systemStatus").innerText = "🟢 SYSTEM NORMAL";
+        document.getElementById("systemStatus").style.background = "#064e3b";
+    }
+
+    updateChart(riskSummary.CRITICAL || 0);
+    updateMap(fleet);
+    updateTable(fleet);
+}
+
+function updateTable(fleet) {
+    const tbody = document.querySelector("#fleetTable tbody");
+    tbody.innerHTML = "";
+
+    const search = document.getElementById("searchTruck").value.toLowerCase();
+    const filter = document.getElementById("riskFilter").value;
+
+    fleet.forEach(truck => {
+
+        if (search && !truck.truck_id.toLowerCase().includes(search)) return;
+
+        const riskItem = latestRisk.find(r => r.truck_id === truck.truck_id);
+        const riskLevel = riskItem ? riskItem.risk_level : "NORMAL";
+
+        if (filter !== "ALL" && riskLevel !== filter) return;
+
+        const statusClass = riskLevel === "CRITICAL" ? "alert" :
+                            riskLevel === "WARNING" ? "warning" : "normal";
+
+        const prediction = truck.eta_minutes > 20 ? "⚠ High Delay Risk" : "Stable";
+
+        tbody.innerHTML += `
+            <tr>
+                <td>${truck.truck_id}</td>
+                <td>${truck.eta_minutes.toFixed(2)} min</td>
+                <td>${truck.speed}</td>
+                <td>${truck.temperature}</td>
+                <td class="${statusClass}">${riskLevel}</td>
+                <td>${prediction}</td>
+            </tr>
+        `;
+    });
+}
+
+function updateMap(fleet) {
+    fleet.forEach(truck => {
+
+        let color = "green";
+        const riskItem = latestRisk.find(r => r.truck_id === truck.truck_id);
+        if (riskItem?.risk_level === "CRITICAL") color = "red";
+        if (riskItem?.risk_level === "WARNING") color = "orange";
+
+        if (!markers[truck.truck_id]) {
+            markers[truck.truck_id] = L.circleMarker(
+                [truck.lat, truck.lon],
+                { radius: 8, color: color, fillColor: color, fillOpacity: 0.8 }
+            ).addTo(map)
+            .bindPopup(`
+                <b>${truck.truck_id}</b><br>
+                Speed: ${truck.speed}<br>
+                Temp: ${truck.temperature}<br>
+                ETA: ${truck.eta_minutes.toFixed(2)} min
+            `);
+
+            trails[truck.truck_id] = [];
+        } else {
+            markers[truck.truck_id].setLatLng([truck.lat, truck.lon]);
+            markers[truck.truck_id].setStyle({ color: color, fillColor: color });
         }
 
-        data.forEach(truck => {
-            const div = document.createElement("div");
-            div.style.padding = "10px";
-            div.style.marginBottom = "8px";
-            div.style.borderRadius = "6px";
-            div.style.fontWeight = "bold";
+        trails[truck.truck_id].push([truck.lat, truck.lon]);
+        if (trails[truck.truck_id].length > 5) trails[truck.truck_id].shift();
 
-            const date = new Date(truck.time * 1000).toLocaleTimeString();
-
-            if (truck.risk_level === "CRITICAL") {
-                div.style.backgroundColor = "#4a0000";
-                div.style.color = "red";
-            } else {
-                div.style.backgroundColor = "#3a2800";
-                div.style.color = "orange";
-            }
-
-            div.innerHTML = `
-                🚨 Truck ${truck.truck_id}
-                | ${truck.risk_level}
-                | Score: ${truck.risk_score}
-                | ${date}
-            `;
-
-            riskContent.appendChild(div);
-        });
-
-    } catch (err) {
-        console.error("Risk error:", err);
-    }
+        L.polyline(trails[truck.truck_id], { color: color, dashArray: "5,5" }).addTo(map);
+    });
 }
 
-/* ===========================
-   LOAD MAP
-=========================== */
-async function loadMap() {
-    try {
-        const fleetData = await fetch("/fleet").then(r => r.json());
-        const riskData = await fetch("/risk").then(r => r.json());
+setInterval(loadData, 4000);
+document.getElementById("searchTruck").addEventListener("input", loadData);
+document.getElementById("riskFilter").addEventListener("change", loadData);
 
-        const riskMap = {};
-        riskData.forEach(r => {
-            riskMap[r.truck_id] = r.risk_level;
-        });
-
-        fleetData.forEach(truck => {
-
-            if (!truck.lat || !truck.lon) return;
-
-            let color = "green";
-            if (riskMap[truck.truck_id] === "CRITICAL") color = "red";
-            else if (riskMap[truck.truck_id] === "WARNING") color = "orange";
-
-            if (markers[truck.truck_id]) {
-                markers[truck.truck_id].setLatLng([truck.lat, truck.lon]);
-                markers[truck.truck_id].setStyle({ color: color, fillColor: color });
-            } else {
-                markers[truck.truck_id] = L.circleMarker(
-                    [truck.lat, truck.lon],
-                    {
-                        radius: 8,
-                        color: color,
-                        fillColor: color,
-                        fillOpacity: 0.8
-                    }
-                ).addTo(map);
-            }
-        });
-
-    } catch (err) {
-        console.error("Map error:", err);
-    }
-}
-
-/* ===========================
-   AUTO REFRESH
-=========================== */
-setInterval(() => {
-    loadFleet();
-    loadRisk();
-    loadMap();
-    loadStats();
-}, 3000);
-
-loadFleet();
-loadRisk();
-loadMap();
-loadStats();
+loadData();
 
 </script>
 
