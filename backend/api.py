@@ -160,3 +160,48 @@ def risk_summary():
 
     except Exception as e:
         return {"error": str(e)}
+    
+
+
+
+
+
+@app.get("/init-db")
+def init_db():
+    try:
+        conn = get_connection()
+        cur = conn.cursor()
+
+        cur.execute("""
+        CREATE TABLE IF NOT EXISTS fleet_data (
+            id SERIAL PRIMARY KEY,
+            truck_id TEXT,
+            lat FLOAT,
+            lon FLOAT,
+            destination_lat FLOAT,
+            destination_lon FLOAT,
+            speed FLOAT,
+            temperature FLOAT,
+            eta_minutes FLOAT,
+            timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+        """)
+
+        cur.execute("""
+        CREATE TABLE IF NOT EXISTS risk_alerts (
+            id SERIAL PRIMARY KEY,
+            truck_id TEXT,
+            risk_score FLOAT,
+            risk_level TEXT,
+            time BIGINT
+        );
+        """)
+
+        conn.commit()
+        cur.close()
+        conn.close()
+
+        return {"message": "Tables created successfully"}
+
+    except Exception as e:
+        return {"error": str(e)}
