@@ -3,874 +3,703 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LiveFleet | AI Operational Control Room</title>
+    <title>LiveFleet | Mission Control Center</title>
     
-    <!-- Tailwind CSS -->
+    <!-- Tailwind CSS & Framer-like animations -->
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- Google Fonts: Inter -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    
-    <!-- Font Awesome -->
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
-    <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    
-    <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <style>
+        :root {
+            --primary: #3b82f6;
+            --primary-glow: rgba(59, 130, 246, 0.5);
+            --bg: #030712;
+            --card-bg: rgba(17, 24, 39, 0.7);
+            --border: rgba(255, 255, 255, 0.08);
+            --text-muted: #9ca3af;
+        }
+
         body {
-            font-family: 'Inter', sans-serif;
-            background-color: #0a0a0a;
-            color: #f3f4f6;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: var(--bg);
+            color: #f9fafb;
+            overflow-x: hidden;
+            background-image: 
+                radial-gradient(circle at 20% 20%, rgba(59, 130, 246, 0.05) 0%, transparent 40%),
+                radial-gradient(circle at 80% 80%, rgba(79, 70, 229, 0.05) 0%, transparent 40%);
         }
-        .glass-card {
-            background: rgba(17, 17, 17, 0.8);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+
+        .mono { font-family: 'JetBrains Mono', monospace; }
+
+        /* Advanced Glassmorphism */
+        .glass {
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
         }
-        .stat-card:hover {
-            border-color: rgba(59, 130, 246, 0.5);
+
+        .glass-hover:hover {
+            border-color: var(--primary);
+            box-shadow: 0 0 20px var(--primary-glow);
             transform: translateY(-2px);
-            transition: all 0.3s ease;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
         }
+
+        /* Animated Scanline Effect */
+        .scanline::before {
+            content: "";
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 2px;
+            background: linear-gradient(to right, transparent, var(--primary), transparent);
+            opacity: 0.3;
+            animation: scan 4s linear infinite;
+            z-index: 10;
+            pointer-events: none;
+        }
+
+        @keyframes scan {
+            0% { top: 0%; }
+            100% { top: 100%; }
+        }
+
+        /* Mission Control Layout */
         #map {
-            height: 500px;
-            border-radius: 12px;
+            height: 100%;
+            width: 100%;
             z-index: 1;
+            filter: grayscale(0.8) contrast(1.2) brightness(0.8);
         }
-        .leaflet-container {
-            background: #1a1a1a !important;
-        }
-        /* Custom scrollbar */
-        ::-webkit-scrollbar {
-            width: 6px;
-        }
-        ::-webkit-scrollbar-track {
-            background: #0a0a0a;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #333;
-            border-radius: 10px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: #444;
-        }
-        .presentation-mode .hide-presentation {
-            display: none !important;
-        }
-        .presentation-mode .show-presentation {
-            display: block !important;
-        }
-        .presentation-mode .expand-presentation {
-            grid-column: span 12 / span 12 !important;
-        }
-        .animate-pulse-slow {
-            animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-        }
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.7; }
-        }
-        .tech-tag {
-            background: rgba(59, 130, 246, 0.1);
-            color: #60a5fa;
-            padding: 2px 8px;
-            border-radius: 4px;
+
+        .leaflet-container { background: #0b0f1a !important; }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: #030712; }
+        ::-webkit-scrollbar-thumb { background: #1f2937; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--primary); }
+
+        /* Glow effects */
+        .glow-text-blue { text-shadow: 0 0 10px rgba(59, 130, 246, 0.5); }
+        .glow-text-red { text-shadow: 0 0 10px rgba(239, 68, 68, 0.5); }
+
+        /* Terminal styling */
+        .terminal-text {
+            color: #10b981;
             font-size: 0.75rem;
-            font-weight: 600;
-            border: 1px solid rgba(59, 130, 246, 0.2);
+            line-height: 1.2;
         }
+
+        .sidebar-item-active {
+            background: rgba(59, 130, 246, 0.1);
+            border-left: 3px solid var(--primary);
+        }
+
+        /* Presentation Mode */
+        .presentation-mode .hide-p { display: none !important; }
+        .presentation-mode .expand-p { grid-column: span 12 / span 12 !important; height: 85vh !important; }
+
+        /* Step Indicator */
+        .step-node {
+            width: 24px; height: 24px;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 10px; font-weight: bold;
+            background: #1f2937; border: 2px solid #374151;
+            transition: all 0.3s;
+        }
+        .step-node.active { background: var(--primary); border-color: var(--primary); box-shadow: 0 0 10px var(--primary-glow); }
+        .step-line { flex: 1; height: 2px; background: #374151; }
+        .step-line.active { background: var(--primary); }
     </style>
 </head>
-<body class="min-h-screen">
+<body class="min-h-screen flex flex-col">
 
-    <!-- Header / Navigation -->
-    <nav class="glass-card sticky top-0 z-50 px-6 py-4 flex items-center justify-between border-b border-white/10">
-        <div class="flex items-center gap-3">
-            <div class="bg-blue-600 p-2 rounded-lg">
-                <i class="fas fa-truck-fast text-xl text-white"></i>
+    <!-- Top Navigation / Ticker -->
+    <header class="glass sticky top-0 z-[100] px-6 py-3 flex items-center justify-between border-b border-white/5">
+        <div class="flex items-center gap-4">
+            <div class="relative">
+                <div class="absolute inset-0 bg-blue-500 blur-lg opacity-20 animate-pulse"></div>
+                <div class="relative bg-blue-600 p-2 rounded-xl border border-blue-400/30">
+                    <i class="fas fa-satellite text-white text-lg"></i>
+                </div>
             </div>
             <div>
-                <h1 class="text-xl font-bold tracking-tight">LiveFleet</h1>
-                <p class="text-[10px] uppercase tracking-widest text-blue-400 font-semibold">AI Operational Control Room</p>
+                <h1 class="text-lg font-extrabold tracking-tight flex items-center gap-2">
+                    LiveFleet <span class="text-blue-500 font-light">OS v2.0</span>
+                </h1>
+                <div class="flex items-center gap-2">
+                    <div class="w-1.5 h-1.5 rounded-full bg-green-500 animate-ping"></div>
+                    <span class="text-[9px] uppercase tracking-widest text-gray-500 font-bold">Pathway Real-time Ingestion Active</span>
+                </div>
             </div>
         </div>
-        
-        <div class="flex items-center gap-6">
-            <div class="hidden md:flex items-center gap-4 text-sm font-medium text-gray-400">
-                <a href="#overview" class="hover:text-white transition-colors">Overview</a>
-                <a href="#dashboard" class="hover:text-white transition-colors">Dashboard</a>
-                <a href="#architecture" class="hover:text-white transition-colors">Tech Stack</a>
+
+        <!-- Global Live Ticker -->
+        <div class="hidden xl:flex items-center gap-8 bg-black/40 px-6 py-2 rounded-full border border-white/5 max-w-2xl overflow-hidden">
+            <div class="flex items-center gap-2 whitespace-nowrap">
+                <span class="text-[10px] font-bold text-blue-500 uppercase tracking-tighter">System Health:</span>
+                <span class="text-[10px] text-gray-400 mono">NOMINAL (99.9%)</span>
             </div>
+            <div class="h-3 w-px bg-white/10"></div>
+            <div class="flex items-center gap-2 whitespace-nowrap overflow-hidden">
+                <span class="text-[10px] font-bold text-orange-500 uppercase tracking-tighter">Latest Event:</span>
+                <span id="latestTickerEvent" class="text-[10px] text-gray-300 mono italic">Awaiting stream data...</span>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-4">
+            <button id="presentationMode" class="px-4 py-2 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 transition-all text-xs font-bold uppercase tracking-wider">
+                <i class="fas fa-expand-arrows-alt mr-2"></i> Focus Mode
+            </button>
+            <div class="bg-black/40 px-4 py-2 rounded-lg border border-white/5 text-xs font-bold mono glow-text-blue">
+                <span id="currentTime">00:00:00</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Workspace -->
+    <main class="flex-1 grid grid-cols-12 gap-0 overflow-hidden">
+        
+        <!-- Left Command Sidebar -->
+        <aside class="hide-p col-span-12 lg:col-span-3 xl:col-span-2 glass border-r border-white/5 flex flex-col p-4 space-y-6 overflow-y-auto">
             
-            <div class="flex items-center gap-3">
-                <button id="presentationToggle" class="flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 transition-all text-sm font-medium">
-                    <i class="fas fa-desktop"></i>
-                    <span>Presentation Mode</span>
-                </button>
-                <div class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-green-500/10 border border-green-500/20">
-                    <div class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-                    <span class="text-xs font-semibold text-green-400">LIVE</span>
+            <!-- Quick Metrics -->
+            <div class="space-y-3">
+                <p class="text-[10px] uppercase tracking-widest text-gray-500 font-extrabold">Fleet Intelligence</p>
+                <div class="grid grid-cols-2 gap-2">
+                    <div class="glass p-3 rounded-xl border-l-2 border-blue-500 bg-blue-500/5">
+                        <p class="text-[10px] text-gray-500 font-bold uppercase">Active</p>
+                        <p id="totalTrucks" class="text-xl font-extrabold glow-text-blue">0</p>
+                    </div>
+                    <div class="glass p-3 rounded-xl border-l-2 border-red-500 bg-red-500/5">
+                        <p class="text-[10px] text-gray-500 font-bold uppercase">Risks</p>
+                        <p id="criticalAlerts" class="text-xl font-extrabold text-red-400">0</p>
+                    </div>
                 </div>
             </div>
-        </div>
-    </nav>
 
-    <main class="max-w-[1600px] mx-auto px-6 py-8 space-y-8">
-        
-        <!-- Hero / Solution Overview -->
-        <section id="overview" class="hide-presentation grid grid-cols-1 lg:grid-cols-2 gap-12 items-center py-10">
-            <div class="space-y-6">
-                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-bold uppercase tracking-wider">
-                    Powered by Pathway
-                </div>
-                <h2 class="text-4xl lg:text-5xl font-extrabold leading-tight">
-                    Real-time Intelligent <br/>
-                    <span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-500">Fleet Monitoring Platform</span>
-                </h2>
-                <p class="text-lg text-gray-400 leading-relaxed max-w-xl">
-                    LiveFleet is a real-time intelligent fleet monitoring platform powered by the Pathway streaming engine. We didn’t just build backend intelligence — we built an operational control room.
-                </p>
-                <div class="grid grid-cols-2 gap-4">
+            <!-- Interactive Stepper: How it Works -->
+            <div class="space-y-4">
+                <p class="text-[10px] uppercase tracking-widest text-gray-500 font-extrabold">Pathway Pipeline</p>
+                <div class="space-y-4">
                     <div class="flex items-start gap-3">
-                        <i class="fas fa-check-circle text-blue-500 mt-1"></i>
+                        <div class="step-node active" title="Ingestion">1</div>
                         <div>
-                            <p class="font-semibold">Pathway Streaming</p>
-                            <p class="text-sm text-gray-500">Real-time ingestion & processing</p>
+                            <p class="text-[11px] font-bold">Streaming Ingestion</p>
+                            <p class="text-[9px] text-gray-500 leading-tight">Pathway reads stream_data.csv continuously.</p>
                         </div>
                     </div>
+                    <div class="flex items-center gap-3 px-3"><div class="w-px h-4 bg-blue-500/30"></div></div>
                     <div class="flex items-start gap-3">
-                        <i class="fas fa-check-circle text-blue-500 mt-1"></i>
+                        <div id="step2" class="step-node" title="Computation">2</div>
                         <div>
-                            <p class="font-semibold">Dynamic Risk Scoring</p>
-                            <p class="text-sm text-gray-500">AI-driven anomaly detection</p>
+                            <p class="text-[11px] font-bold">Reactive Computation</p>
+                            <p class="text-[9px] text-gray-500 leading-tight">ETA, Distance, and Risk recomputed on-the-fly.</p>
                         </div>
                     </div>
+                    <div class="flex items-center gap-3 px-3"><div class="w-px h-4 bg-gray-700"></div></div>
                     <div class="flex items-start gap-3">
-                        <i class="fas fa-check-circle text-blue-500 mt-1"></i>
+                        <div id="step3" class="step-node" title="Storage">3</div>
                         <div>
-                            <p class="font-semibold">Predictive ETA</p>
-                            <p class="text-sm text-gray-500">Live delay indicators</p>
-                        </div>
-                    </div>
-                    <div class="flex items-start gap-3">
-                        <i class="fas fa-check-circle text-blue-500 mt-1"></i>
-                        <div>
-                            <p class="font-semibold">PostgreSQL Storage</p>
-                            <p class="text-sm text-gray-500">Persistent production state</p>
+                            <p class="text-[11px] font-bold">Postgres Persistence</p>
+                            <p class="text-[9px] text-gray-500 leading-tight">Reliable state storage for historical analytics.</p>
                         </div>
                     </div>
                 </div>
             </div>
-            <div class="glass-card p-8 rounded-3xl border-white/5 relative overflow-hidden group">
-                <div class="absolute -top-24 -right-24 w-64 h-64 bg-blue-600/20 blur-[100px] rounded-full"></div>
-                <div class="absolute -bottom-24 -left-24 w-64 h-64 bg-indigo-600/20 blur-[100px] rounded-full"></div>
-                
-                <div class="relative space-y-6">
-                    <div class="flex items-center justify-between">
-                        <h3 class="font-bold text-xl">Key Innovations</h3>
-                        <i class="fas fa-bolt text-yellow-400"></i>
-                    </div>
-                    <ul class="space-y-4">
-                        <li class="flex items-center gap-4 p-4 rounded-xl bg-white/5 hover:bg-white/10 transition-colors border border-white/5">
-                            <div class="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center text-blue-400">
-                                <i class="fas fa-sync"></i>
-                            </div>
-                            <div>
-                                <p class="text-sm font-bold">Zero-Latency Refresh</p>
-                                <p class="text-xs text-gray-500">No manual refresh. No cron jobs. Automatic recomputations.</p>
-                            </div>
-                        </li>
-                        <li class="flex items-center gap-4 p-4 rounded-xl bg-white/5 hover:bg-white/10 transition-colors border border-white/5">
-                            <div class="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center text-purple-400">
-                                <i class="fas fa-brain"></i>
-                            </div>
-                            <div>
-                                <p class="text-sm font-bold">Operational Intelligence</p>
-                                <p class="text-xs text-gray-500">Speed anomalies, temperature thresholds & high ETA alerts.</p>
-                            </div>
-                        </li>
-                        <li class="flex items-center gap-4 p-4 rounded-xl bg-white/5 hover:bg-white/10 transition-colors border border-white/5">
-                            <div class="w-10 h-10 rounded-lg bg-green-500/20 flex items-center justify-center text-green-400">
-                                <i class="fas fa-shield-halved"></i>
-                            </div>
-                            <div>
-                                <p class="text-sm font-bold">Production-Ready Stack</p>
-                                <p class="text-xs text-gray-500">Dockerized FastAPI + PostgreSQL for persistent analytics.</p>
-                            </div>
-                        </li>
-                    </ul>
-                </div>
-            </div>
-        </section>
 
-        <!-- Main Dashboard Section -->
-        <section id="dashboard" class="space-y-6">
-            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <h2 class="text-2xl font-bold flex items-center gap-2">
-                    <i class="fas fa-chart-line text-blue-500"></i>
-                    Operational Dashboard
-                </h2>
-                <div class="flex items-center gap-4">
+            <!-- Risk Feed Ticker -->
+            <div class="flex-1 flex flex-col space-y-3 min-h-[300px]">
+                <p class="text-[10px] uppercase tracking-widest text-gray-500 font-extrabold">AI Risk Logs</p>
+                <div id="riskLogs" class="flex-1 glass rounded-xl p-3 overflow-y-auto space-y-2 mono text-[10px]">
+                    <div class="text-gray-600 italic">Initializing risk engine...</div>
+                </div>
+            </div>
+
+            <!-- Tech Stack Pills -->
+            <div class="pt-4 border-t border-white/5 grid grid-cols-2 gap-2">
+                <div class="flex items-center gap-2 px-2 py-1 rounded bg-white/5 border border-white/10 grayscale hover:grayscale-0 transition-all cursor-default">
+                    <i class="fab fa-python text-blue-400 text-[10px]"></i>
+                    <span class="text-[9px] font-bold">FastAPI</span>
+                </div>
+                <div class="flex items-center gap-2 px-2 py-1 rounded bg-white/5 border border-white/10 grayscale hover:grayscale-0 transition-all cursor-default">
+                    <i class="fas fa-database text-blue-300 text-[10px]"></i>
+                    <span class="text-[9px] font-bold">PostgreSQL</span>
+                </div>
+                <div class="flex items-center gap-2 px-2 py-1 rounded bg-white/5 border border-white/10 grayscale hover:grayscale-0 transition-all cursor-default col-span-2">
+                    <i class="fas fa-bolt text-yellow-400 text-[10px]"></i>
+                    <span class="text-[9px] font-bold tracking-widest">PATHWAY ENGINE</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Center: Map & Detailed Dashboard -->
+        <div class="col-span-12 lg:col-span-9 xl:col-span-10 flex flex-col relative">
+            
+            <!-- Floating Map Controls -->
+            <div class="absolute top-6 left-6 z-50 flex flex-col gap-4 w-72">
+                <div class="glass p-4 rounded-2xl border-l-4 border-blue-500 shadow-2xl scanline relative overflow-hidden">
+                    <div class="flex items-center justify-between mb-2">
+                        <h3 class="text-xs font-extrabold uppercase tracking-widest">Fleet Operations</h3>
+                        <div class="flex gap-1">
+                            <div class="w-1 h-1 rounded-full bg-blue-500 animate-pulse"></div>
+                            <div class="w-1 h-1 rounded-full bg-blue-500 animate-pulse" style="animation-delay: 0.2s"></div>
+                        </div>
+                    </div>
                     <div class="relative">
-                        <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm"></i>
-                        <input type="text" id="truckSearch" placeholder="Search Truck ID..." class="bg-white/5 border border-white/10 rounded-lg py-2 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 w-64">
+                        <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-[10px]"></i>
+                        <input type="text" id="truckSearch" placeholder="Search Global ID..." class="w-full bg-black/40 border border-white/10 rounded-lg py-2 pl-8 pr-4 text-[10px] focus:outline-none focus:ring-1 focus:ring-blue-500/50">
+                    </div>
+                </div>
+
+                <!-- Legend -->
+                <div class="glass p-3 rounded-xl space-y-2">
+                    <div class="flex items-center justify-between text-[9px] font-bold uppercase tracking-tighter">
+                        <span class="text-gray-500">Legend</span>
+                        <i class="fas fa-info-circle text-gray-600"></i>
+                    </div>
+                    <div class="flex flex-col gap-2">
+                        <div class="flex items-center gap-3">
+                            <div class="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_5px_#22c55e]"></div>
+                            <span class="text-[10px] text-gray-300">Operational <span class="text-[8px] opacity-50 font-normal italic">(ETA < 30m)</span></span>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <div class="w-2 h-2 rounded-full bg-orange-500 shadow-[0_0_5px_#f97316]"></div>
+                            <span class="text-[10px] text-gray-300">Risk Threshold <span class="text-[8px] opacity-50 font-normal italic">(Warning)</span></span>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <div class="w-2 h-2 rounded-full bg-red-500 shadow-[0_0_5px_#ef4444]"></div>
+                            <span class="text-[10px] text-gray-300">Critical Anomaly <span class="text-[8px] opacity-50 font-normal italic">(Alert)</span></span>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Stats Grid -->
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div class="glass-card stat-card p-5 rounded-2xl flex items-center gap-4">
-                    <div class="w-12 h-12 rounded-xl bg-blue-500/20 flex items-center justify-center text-blue-400 text-xl">
-                        <i class="fas fa-truck"></i>
-                    </div>
+            <!-- Focused Truck Overlay (Bottom Right) -->
+            <div id="truckDetail" class="absolute bottom-6 right-6 z-50 w-80 glass rounded-2xl overflow-hidden transition-all duration-500 translate-y-[120%] opacity-0 border-t-2 border-blue-500">
+                <div class="bg-blue-600/10 p-4 border-b border-white/5 flex items-center justify-between">
                     <div>
-                        <p class="text-xs font-medium text-gray-500 uppercase tracking-wider">Total Fleet</p>
-                        <p id="totalTrucks" class="text-2xl font-bold">0</p>
+                        <p class="text-[10px] text-blue-400 font-bold uppercase tracking-widest">Telemetry Detail</p>
+                        <h4 id="detailTruckId" class="text-xl font-extrabold tracking-tighter">T-001</h4>
                     </div>
+                    <button onclick="hideDetail()" class="text-gray-500 hover:text-white transition-colors">
+                        <i class="fas fa-times"></i>
+                    </button>
                 </div>
-                <div class="glass-card stat-card p-5 rounded-2xl flex items-center gap-4">
-                    <div class="w-12 h-12 rounded-xl bg-red-500/20 flex items-center justify-center text-red-400 text-xl">
-                        <i class="fas fa-triangle-exclamation"></i>
+                <div class="p-4 space-y-4">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="space-y-1">
+                            <p class="text-[9px] text-gray-500 font-bold uppercase">Speed</p>
+                            <p class="text-lg font-bold mono"><span id="detailSpeed">0</span> <span class="text-[10px] font-normal text-gray-600">KM/H</span></p>
+                        </div>
+                        <div class="space-y-1">
+                            <p class="text-[9px] text-gray-500 font-bold uppercase">Temperature</p>
+                            <p class="text-lg font-bold mono"><span id="detailTemp">0</span> <span class="text-[10px] font-normal text-gray-600">°C</span></p>
+                        </div>
                     </div>
-                    <div>
-                        <p class="text-xs font-medium text-gray-500 uppercase tracking-wider">Critical Risks</p>
-                        <p id="criticalAlerts" class="text-2xl font-bold">0</p>
+                    <div class="p-3 bg-black/40 rounded-xl border border-white/5">
+                        <div class="flex justify-between items-center mb-1">
+                            <p class="text-[9px] text-gray-500 font-bold uppercase tracking-tighter">Pathway Predicted ETA</p>
+                            <span id="detailEta" class="text-xs font-bold text-blue-400">0.0m</span>
+                        </div>
+                        <div class="w-full bg-gray-800 h-1 rounded-full overflow-hidden">
+                            <div id="etaProgress" class="h-full bg-blue-500" style="width: 45%"></div>
+                        </div>
                     </div>
-                </div>
-                <div class="glass-card stat-card p-5 rounded-2xl flex items-center gap-4">
-                    <div class="w-12 h-12 rounded-xl bg-orange-500/20 flex items-center justify-center text-orange-400 text-xl">
-                        <i class="fas fa-gauge-high"></i>
-                    </div>
-                    <div>
-                        <p class="text-xs font-medium text-gray-500 uppercase tracking-wider">Avg Speed</p>
-                        <p id="avgSpeed" class="text-2xl font-bold">0 <span class="text-sm font-normal text-gray-500">km/h</span></p>
-                    </div>
-                </div>
-                <div class="glass-card stat-card p-5 rounded-2xl flex items-center gap-4">
-                    <div class="w-12 h-12 rounded-xl bg-cyan-500/20 flex items-center justify-center text-cyan-400 text-xl">
-                        <i class="fas fa-temperature-three-quarters"></i>
-                    </div>
-                    <div>
-                        <p class="text-xs font-medium text-gray-500 uppercase tracking-wider">Avg Temperature</p>
-                        <p id="avgTemp" class="text-2xl font-bold">0 <span class="text-sm font-normal text-gray-500">°C</span></p>
+                    <div id="detailRiskBadge" class="p-3 rounded-xl border flex items-center gap-3">
+                        <i id="detailRiskIcon" class="fas fa-check-circle text-green-500"></i>
+                        <div>
+                            <p id="detailRiskTitle" class="text-[10px] font-bold uppercase tracking-wider">Status Nominal</p>
+                            <p id="detailRiskScore" class="text-[9px] text-gray-500 leading-tight">Risk Score: 12.4 | No anomalies detected by Pathway streaming engine.</p>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Dashboard Grid -->
-            <div class="grid grid-cols-12 gap-6">
-                <!-- Map Container -->
-                <div class="col-span-12 lg:col-span-8 space-y-6 expand-presentation">
-                    <div class="glass-card rounded-2xl overflow-hidden relative">
-                        <div class="absolute top-4 left-4 z-[10] flex flex-col gap-2">
-                            <div class="bg-black/80 backdrop-blur-md px-3 py-2 rounded-lg border border-white/10 text-[10px] font-bold uppercase flex flex-col gap-2">
-                                <div class="flex items-center gap-2">
-                                    <div class="w-2 h-2 rounded-full bg-green-500"></div>
-                                    <span>Normal State</span>
-                                </div>
-                                <div class="flex items-center gap-2">
-                                    <div class="w-2 h-2 rounded-full bg-orange-500"></div>
-                                    <span>Warning Threshold</span>
-                                </div>
-                                <div class="flex items-center gap-2">
-                                    <div class="w-2 h-2 rounded-full bg-red-500"></div>
-                                    <span>Critical Alert</span>
-                                </div>
+            <!-- Main Map View -->
+            <div class="flex-1 relative">
+                <div id="map"></div>
+                <!-- Interactive Dashboard Drawer -->
+                <div class="absolute bottom-6 left-6 right-6 z-40 grid grid-cols-12 gap-4 h-48 pointer-events-none">
+                    <div class="hide-p col-span-8 pointer-events-auto glass rounded-2xl overflow-hidden flex flex-col shadow-2xl">
+                        <div class="px-4 py-2 border-b border-white/5 flex items-center justify-between bg-black/20">
+                            <div class="flex items-center gap-2">
+                                <i class="fas fa-list-ul text-blue-500 text-[10px]"></i>
+                                <span class="text-[10px] font-extrabold uppercase tracking-widest">Global Fleet Status</span>
                             </div>
+                            <span class="text-[8px] text-gray-500 font-bold mono">UPDATES EVERY 3000MS</span>
                         </div>
-                        <div id="map"></div>
-                    </div>
-
-                    <!-- Fleet Table -->
-                    <div class="glass-card rounded-2xl overflow-hidden hide-presentation">
-                        <div class="px-6 py-4 border-b border-white/10 flex items-center justify-between">
-                            <h3 class="font-bold">Fleet Status Details</h3>
-                            <span class="text-xs text-gray-500">Auto-updating every 3s</span>
-                        </div>
-                        <div class="overflow-x-auto">
-                            <table id="fleetTable" class="w-full text-left text-sm">
-                                <thead>
-                                    <tr class="bg-white/5 text-gray-400 font-medium border-b border-white/10">
-                                        <th class="px-6 py-4">Truck ID</th>
-                                        <th class="px-6 py-4 text-center">Location (Lat, Lon)</th>
-                                        <th class="px-6 py-4 text-center">Speed</th>
-                                        <th class="px-6 py-4 text-center">Temp</th>
-                                        <th class="px-6 py-4 text-center">ETA (min)</th>
-                                        <th class="px-6 py-4 text-right">Status</th>
+                        <div class="flex-1 overflow-y-auto">
+                            <table id="fleetTable" class="w-full text-[10px] text-left">
+                                <thead class="sticky top-0 bg-gray-900 text-gray-500 font-bold border-b border-white/5 uppercase tracking-tighter">
+                                    <tr>
+                                        <th class="px-4 py-2">Unit</th>
+                                        <th class="px-4 py-2 text-center">Velocity</th>
+                                        <th class="px-4 py-2 text-center">Thermal</th>
+                                        <th class="px-4 py-2 text-center">ETA Prediction</th>
+                                        <th class="px-4 py-2 text-right">Pathway Status</th>
                                     </tr>
                                 </thead>
-                                <tbody class="divide-y divide-white/5">
-                                    <!-- Rows added via JS -->
+                                <tbody class="divide-y divide-white/5 font-medium">
+                                    <!-- Dynamic rows -->
                                 </tbody>
                             </table>
                         </div>
                     </div>
-                </div>
-
-                <!-- Right Sidebar: Risks & Analytics -->
-                <div class="col-span-12 lg:col-span-4 space-y-6 hide-presentation">
-                    <!-- Live Risk Panel -->
-                    <div class="glass-card rounded-2xl overflow-hidden flex flex-col max-h-[450px]">
-                        <div class="px-6 py-4 border-b border-white/10 flex items-center justify-between bg-red-500/5">
-                            <h3 class="font-bold flex items-center gap-2">
-                                <i class="fas fa-satellite-dish text-red-400 animate-pulse"></i>
-                                Real-time Risk Stream
-                            </h3>
-                            <span class="px-2 py-0.5 rounded text-[10px] bg-red-500/20 text-red-400 font-bold uppercase">Streaming</span>
+                    <div class="hide-p col-span-4 pointer-events-auto glass rounded-2xl p-4 flex flex-col shadow-2xl">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-[10px] font-extrabold uppercase tracking-widest">Alert Volatility</h3>
+                            <i class="fas fa-chart-line text-blue-500"></i>
                         </div>
-                        <div id="risk-content" class="p-4 overflow-y-auto space-y-3 flex-1">
-                            <div class="flex items-center justify-center py-10 text-gray-500">
-                                <i class="fas fa-spinner fa-spin mr-2"></i>
-                                Initializing Risk Engine...
-                            </div>
+                        <div class="flex-1">
+                            <canvas id="riskChart"></canvas>
                         </div>
-                    </div>
-
-                    <!-- Risk Trends Chart -->
-                    <div class="glass-card rounded-2xl p-6">
-                        <h3 class="font-bold mb-4">Risk Level Evolution</h3>
-                        <canvas id="riskChart" height="200"></canvas>
-                        <p class="mt-4 text-[10px] text-gray-500 text-center uppercase tracking-widest font-semibold">Live Analytics Dashboard</p>
-                    </div>
-
-                    <!-- Operational Logic Info -->
-                    <div class="glass-card rounded-2xl p-5 border-l-4 border-blue-500 bg-blue-500/5">
-                        <h4 class="text-xs font-bold text-blue-400 uppercase tracking-widest mb-2">Operational Logic</h4>
-                        <p class="text-xs text-gray-400 leading-relaxed">
-                            The color updates dynamically based on streaming risk score. Alerts are automatically generated from our risk engine — not manually.
-                        </p>
                     </div>
                 </div>
             </div>
-        </section>
-
-        <!-- Architecture Section -->
-        <section id="architecture" class="hide-presentation py-12 border-t border-white/10">
-            <div class="text-center mb-12 space-y-3">
-                <h2 class="text-3xl font-bold">Architecture Explanation</h2>
-                <p class="text-gray-500">Technical Layer Overview</p>
-            </div>
-            
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 relative">
-                <!-- Connectors for Desktop (Visual only) -->
-                <div class="hidden lg:block absolute top-1/2 left-1/4 right-1/4 h-px bg-gradient-to-r from-blue-500/50 via-purple-500/50 to-indigo-500/50 -translate-y-1/2 -z-10"></div>
-                
-                <!-- Layer 1 -->
-                <div class="glass-card p-6 rounded-2xl border-blue-500/20 relative">
-                    <div class="w-12 h-12 rounded-full bg-blue-600 flex items-center justify-center absolute -top-6 left-1/2 -translate-x-1/2 border-4 border-[#0a0a0a] shadow-xl">
-                        <i class="fas fa-microchip text-white"></i>
-                    </div>
-                    <div class="mt-6 text-center space-y-4">
-                        <h4 class="font-bold text-blue-400">Streaming Layer</h4>
-                        <p class="text-[11px] text-gray-500 uppercase font-bold tracking-widest">Powered by Pathway</p>
-                        <div class="text-left space-y-2">
-                            <div class="flex items-center gap-2 text-xs">
-                                <i class="fas fa-circle-check text-blue-500"></i>
-                                <span>Reads stream_data.csv</span>
-                            </div>
-                            <div class="flex items-center gap-2 text-xs text-gray-400">
-                                <i class="fas fa-circle-check text-blue-500"></i>
-                                <span>Auto-updates computation graph</span>
-                            </div>
-                            <div class="flex items-center gap-2 text-xs text-gray-400">
-                                <i class="fas fa-circle-check text-blue-500"></i>
-                                <span>Calculates ETA & Risk Score</span>
-                            </div>
-                        </div>
-                        <p class="text-[10px] bg-blue-500/10 p-2 rounded italic text-blue-300">
-                            "Pathway automatically recomputes results whenever new data arrives. No cron jobs."
-                        </p>
-                    </div>
-                </div>
-
-                <!-- Layer 2 -->
-                <div class="glass-card p-6 rounded-2xl border-purple-500/20 relative">
-                    <div class="w-12 h-12 rounded-full bg-purple-600 flex items-center justify-center absolute -top-6 left-1/2 -translate-x-1/2 border-4 border-[#0a0a0a] shadow-xl">
-                        <i class="fas fa-database text-white"></i>
-                    </div>
-                    <div class="mt-6 text-center space-y-4">
-                        <h4 class="font-bold text-purple-400">Database Layer</h4>
-                        <p class="text-[11px] text-gray-500 uppercase font-bold tracking-widest">PostgreSQL</p>
-                        <div class="text-left space-y-2">
-                            <div class="flex items-center gap-2 text-xs">
-                                <i class="fas fa-circle-check text-purple-500"></i>
-                                <span>Stores fleet historical data</span>
-                            </div>
-                            <div class="flex items-center gap-2 text-xs text-gray-400">
-                                <i class="fas fa-circle-check text-purple-500"></i>
-                                <span>Persistent risk alerts storage</span>
-                            </div>
-                            <div class="flex items-center gap-2 text-xs text-gray-400">
-                                <i class="fas fa-circle-check text-purple-500"></i>
-                                <span>Enables complex analytics</span>
-                            </div>
-                        </div>
-                        <p class="text-[10px] bg-purple-500/10 p-2 rounded italic text-purple-300">
-                            "Persistent state with PostgreSQL for real production capability."
-                        </p>
-                    </div>
-                </div>
-
-                <!-- Layer 3 -->
-                <div class="glass-card p-6 rounded-2xl border-indigo-500/20 relative">
-                    <div class="w-12 h-12 rounded-full bg-indigo-600 flex items-center justify-center absolute -top-6 left-1/2 -translate-x-1/2 border-4 border-[#0a0a0a] shadow-xl">
-                        <i class="fas fa-server text-white"></i>
-                    </div>
-                    <div class="mt-6 text-center space-y-4">
-                        <h4 class="font-bold text-indigo-400">Backend Layer</h4>
-                        <p class="text-[11px] text-gray-500 uppercase font-bold tracking-widest">FastAPI + Docker</p>
-                        <div class="text-left space-y-2">
-                            <div class="flex items-center gap-2 text-xs">
-                                <i class="fas fa-circle-check text-indigo-500"></i>
-                                <span>RESTful API Architecture</span>
-                            </div>
-                            <div class="flex items-center gap-2 text-xs text-gray-400">
-                                <i class="fas fa-circle-check text-indigo-500"></i>
-                                <span>Dockerized Deployment</span>
-                            </div>
-                            <div class="flex items-center gap-2 text-xs text-gray-400">
-                                <i class="fas fa-circle-check text-indigo-500"></i>
-                                <span>Real-time Data Serving</span>
-                            </div>
-                        </div>
-                        <p class="text-[10px] bg-indigo-500/10 p-2 rounded italic text-indigo-300">
-                            "Serves /fleet, /risk, /stats, and /risk-summary endpoints efficiently."
-                        </p>
-                    </div>
-                </div>
-
-                <!-- Layer 4 -->
-                <div class="glass-card p-6 rounded-2xl border-cyan-500/20 relative">
-                    <div class="w-12 h-12 rounded-full bg-cyan-600 flex items-center justify-center absolute -top-6 left-1/2 -translate-x-1/2 border-4 border-[#0a0a0a] shadow-xl">
-                        <i class="fas fa-display text-white"></i>
-                    </div>
-                    <div class="mt-6 text-center space-y-4">
-                        <h4 class="font-bold text-cyan-400">Frontend Layer</h4>
-                        <p class="text-[11px] text-gray-500 uppercase font-bold tracking-widest">Interactive UI</p>
-                        <div class="text-left space-y-2">
-                            <div class="flex items-center gap-2 text-xs">
-                                <i class="fas fa-circle-check text-cyan-500"></i>
-                                <span>Leaflet Live Map Visualization</span>
-                            </div>
-                            <div class="flex items-center gap-2 text-xs text-gray-400">
-                                <i class="fas fa-circle-check text-cyan-500"></i>
-                                <span>Chart.js Real-time Analytics</span>
-                            </div>
-                            <div class="flex items-center gap-2 text-xs text-gray-400">
-                                <i class="fas fa-circle-check text-cyan-500"></i>
-                                <span>Executive Presentation Mode</span>
-                            </div>
-                        </div>
-                        <p class="text-[10px] bg-cyan-500/10 p-2 rounded italic text-cyan-300">
-                            "Built as an operational control room with search, filters, and alerts."
-                        </p>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- Comparison Section -->
-        <section id="why-different" class="hide-presentation py-12 grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div class="lg:col-span-1 space-y-4">
-                <h2 class="text-3xl font-bold leading-tight">Why This Is <span class="text-blue-500">Different</span></h2>
-                <p class="text-gray-500 leading-relaxed">
-                    Most hackathon dashboards are static or use fake data. We built a production-ready operational platform.
-                </p>
-            </div>
-            <div class="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div class="glass-card p-6 rounded-2xl hover:bg-white/5 transition-colors border border-white/5">
-                    <h5 class="font-bold text-lg mb-2 flex items-center gap-2">
-                        <i class="fas fa-fire text-orange-500"></i>
-                        Real Streaming
-                    </h5>
-                    <p class="text-sm text-gray-400">
-                        Unlike teams using <code>setInterval</code> for fake refreshes, our backend computations are triggered automatically by Pathway’s streaming engine.
-                    </p>
-                </div>
-                <div class="glass-card p-6 rounded-2xl hover:bg-white/5 transition-colors border border-white/5">
-                    <h5 class="font-bold text-lg mb-2 flex items-center gap-2">
-                        <i class="fas fa-brain text-purple-500"></i>
-                        Intelligence Layer
-                    </h5>
-                    <p class="text-sm text-gray-400">
-                        We don't just show locations. We compute ETA, Risk Scores, and Predict delay probability with dynamic severity classification.
-                    </p>
-                </div>
-                <div class="glass-card p-6 rounded-2xl hover:bg-white/5 transition-colors border border-white/5">
-                    <h5 class="font-bold text-lg mb-2 flex items-center gap-2">
-                        <i class="fas fa-box text-blue-500"></i>
-                        Full Stack Ready
-                    </h5>
-                    <p class="text-sm text-gray-400">
-                        Docker, Postgres, Render, REST APIs. This is not a prototype; this is deployable software.
-                    </p>
-                </div>
-                <div class="glass-card p-6 rounded-2xl hover:bg-white/5 transition-colors border border-white/5">
-                    <h5 class="font-bold text-lg mb-2 flex items-center gap-2">
-                        <i class="fas fa-hand-holding-hand text-green-500"></i>
-                        Operational Usability
-                    </h5>
-                    <p class="text-sm text-gray-400">
-                        Search, Filters, Analytics, Toast alerts, and Presentation mode. It feels like a high-end SaaS product.
-                    </p>
-                </div>
-            </div>
-        </section>
-
+        </div>
     </main>
 
-    <!-- Footer -->
-    <footer class="hide-presentation border-t border-white/10 mt-12 py-8 px-6 text-center">
-        <div class="flex items-center justify-center gap-6 mb-4 grayscale opacity-40">
-            <span class="font-bold text-xl tracking-tighter">PATHWAY</span>
-            <span class="font-bold text-xl tracking-tighter">POSTGRESQL</span>
-            <span class="font-bold text-xl tracking-tighter">FASTAPI</span>
-            <span class="font-bold text-xl tracking-tighter">DOCKER</span>
-            <span class="font-bold text-xl tracking-tighter">RENDER</span>
+    <!-- Project Insight Modals (Hidden by default) -->
+    <div id="insightOverlay" class="fixed inset-0 z-[200] bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-6">
+        <div class="glass max-w-2xl w-full rounded-3xl overflow-hidden border-t-4 border-blue-600 shadow-[0_0_100px_rgba(59,130,246,0.2)]">
+            <div class="p-8 space-y-6">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-4">
+                        <div class="bg-blue-600/20 p-3 rounded-2xl text-blue-400">
+                            <i class="fas fa-brain text-2xl"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-2xl font-black tracking-tighter italic">WHY THIS WINS</h2>
+                            <p class="text-xs text-blue-400 font-bold uppercase tracking-widest">The Technical Competitive Advantage</p>
+                        </div>
+                    </div>
+                    <button onclick="toggleInsight()" class="text-gray-500 hover:text-white text-xl transition-all">
+                        <i class="fas fa-times-circle"></i>
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="glass p-5 rounded-2xl border-l-4 border-yellow-500 bg-yellow-500/5 space-y-2">
+                        <h4 class="font-black text-xs uppercase tracking-widest text-yellow-500 flex items-center gap-2">
+                            <i class="fas fa-bolt"></i> Real Streaming
+                        </h4>
+                        <p class="text-xs text-gray-400 leading-relaxed">
+                            Unlike other projects that use <code class="bg-black/40 px-1 rounded">setInterval</code> to fake data, LiveFleet uses <strong>Pathway's reactive engine</strong>. Computations are triggered by data changes, not clocks.
+                        </p>
+                    </div>
+                    <div class="glass p-5 rounded-2xl border-l-4 border-blue-500 bg-blue-500/5 space-y-2">
+                        <h4 class="font-black text-xs uppercase tracking-widest text-blue-400 flex items-center gap-2">
+                            <i class="fas fa-shield-halved"></i> Production Ready
+                        </h4>
+                        <p class="text-xs text-gray-400 leading-relaxed">
+                            We implemented <strong>PostgreSQL persistence</strong> for real operational capability. This isn't just a prototype; it's a scalable fleet management SaaS foundation.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="bg-blue-600 text-white p-4 rounded-2xl flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <i class="fas fa-award text-2xl text-yellow-300"></i>
+                        <p class="text-sm font-bold tracking-tight">"We didn't just build a dashboard — we built an operational control room."</p>
+                    </div>
+                    <button onclick="toggleInsight()" class="bg-white text-blue-600 px-4 py-2 rounded-xl text-xs font-black uppercase hover:bg-blue-50 transition-all">Got it</button>
+                </div>
+            </div>
         </div>
-        <p class="text-xs text-gray-500 tracking-widest font-medium uppercase">LiveFleet Monitoring Dashboard &copy; 2024</p>
-    </footer>
+    </div>
 
-    <!-- Toast Notifications Container -->
-    <div id="toastContainer" class="fixed bottom-6 right-6 z-[100] flex flex-col gap-3"></div>
+    <!-- Toast Notifications -->
+    <div id="toastContainer" class="fixed top-24 right-6 z-[250] flex flex-col gap-3"></div>
 
-    <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
     <script>
-        /* ============================================================
-           CONFIGURATION & STATE
-           ============================================================ */
-        const REFRESH_INTERVAL = 3000;
-        let markers = {};
-        let map;
-        let riskChart;
-        let presentationMode = false;
-        let lastRiskCount = 0;
+        // Configuration
+        const REFRESH_RATE = 3000;
+        let map, markers = {}, riskChart, lastRiskCount = 0;
+        let isPresentationMode = false;
         let currentSearchQuery = "";
+        let selectedTruckId = null;
 
-        /* ============================================================
-           MAP INITIALIZATION
-           ============================================================ */
+        // Initialize Map
         function initMap() {
-            map = L.map('map', {
-                zoomControl: false,
-                attributionControl: false
-            }).setView([28.60, 77.30], 10);
-
-            // Dark theme tiles
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-                maxZoom: 20
-            }).addTo(map);
-
+            map = L.map('map', { zoomControl: false, attributionControl: false }).setView([28.60, 77.30], 11);
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 20 }).addTo(map);
             L.control.zoom({ position: 'bottomright' }).addTo(map);
         }
 
-        /* ============================================================
-           ANALYTICS INITIALIZATION
-           ============================================================ */
+        // Initialize Chart
         function initChart() {
             const ctx = document.getElementById('riskChart').getContext('2d');
             riskChart = new Chart(ctx, {
                 type: 'line',
                 data: {
                     labels: [],
-                    datasets: [
-                        {
-                            label: 'Critical',
-                            borderColor: '#ef4444',
-                            backgroundColor: 'rgba(239, 68, 68, 0.1)',
-                            data: [],
-                            fill: true,
-                            tension: 0.4
-                        },
-                        {
-                            label: 'Warning',
-                            borderColor: '#f97316',
-                            backgroundColor: 'rgba(249, 115, 22, 0.1)',
-                            data: [],
-                            fill: true,
-                            tension: 0.4
-                        }
-                    ]
+                    datasets: [{
+                        label: 'Risk Volatility',
+                        borderColor: '#3b82f6',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        data: [],
+                        fill: true,
+                        tension: 0.4,
+                        borderWidth: 2,
+                        pointRadius: 0
+                    }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    plugins: {
-                        legend: { display: false }
-                    },
+                    plugins: { legend: { display: false } },
                     scales: {
-                        y: {
-                            beginAtZero: true,
-                            grid: { color: 'rgba(255,255,255,0.05)' },
-                            ticks: { color: '#666', font: { size: 10 } }
-                        },
-                        x: {
-                            grid: { display: false },
-                            ticks: { color: '#666', font: { size: 10 } }
-                        }
+                        y: { display: false, beginAtZero: true },
+                        x: { display: false }
                     }
                 }
             });
         }
 
-        /* ============================================================
-           UI UTILITIES
-           ============================================================ */
-        function showToast(title, message, level = 'critical') {
-            const container = document.getElementById('toastContainer');
-            const toast = document.createElement('div');
-            const colorClass = level === 'critical' ? 'border-red-500 bg-red-500/10' : 'border-orange-500 bg-orange-500/10';
-            const iconClass = level === 'critical' ? 'fa-triangle-exclamation text-red-500' : 'fa-circle-exclamation text-orange-500';
-
-            toast.className = `glass-card p-4 rounded-xl border-l-4 ${colorClass} min-w-[300px] flex gap-3 animate-bounce-in shadow-2xl`;
-            toast.innerHTML = `
-                <i class="fas ${iconClass} mt-1"></i>
-                <div>
-                    <p class="font-bold text-sm">${title}</p>
-                    <p class="text-xs text-gray-400">${message}</p>
-                </div>
-            `;
-
-            container.appendChild(toast);
-            setTimeout(() => {
-                toast.classList.add('opacity-0', 'transition-opacity', 'duration-500');
-                setTimeout(() => toast.remove(), 500);
-            }, 5000);
-        }
-
-        /* ============================================================
-           DATA FETCHING & UPDATES
-           ============================================================ */
-        
-        async function updateStats() {
+        // Core Update Logic
+        async function refreshData() {
             try {
-                const stats = await fetch("/stats").then(r => r.json());
-                const riskSummary = await fetch("/risk-summary").then(r => r.json());
+                const [stats, fleet, riskSummary, riskAlerts] = await Promise.all([
+                    fetch("/stats").then(r => r.json()),
+                    fetch("/fleet").then(r => r.json()),
+                    fetch("/risk-summary").then(r => r.json()),
+                    fetch("/risk").then(r => r.json())
+                ]);
 
-                document.getElementById("totalTrucks").innerText = stats.total_trucks || 0;
-                document.getElementById("avgSpeed").innerText = (stats.avg_speed || 0);
-                document.getElementById("avgTemp").innerText = (stats.avg_temperature || 0);
-                document.getElementById("criticalAlerts").innerText = riskSummary.CRITICAL || 0;
-
-                // Update Chart
-                const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-                if (riskChart.data.labels.length > 10) {
-                    riskChart.data.labels.shift();
-                    riskChart.data.datasets[0].data.shift();
-                    riskChart.data.datasets[1].data.shift();
-                }
-                riskChart.data.labels.push(now);
-                riskChart.data.datasets[0].data.push(riskSummary.CRITICAL || 0);
-                riskChart.data.datasets[1].data.push(riskSummary.WARNING || 0);
-                riskChart.update('none');
-
-                // Toast notification logic
-                if (riskSummary.CRITICAL > lastRiskCount) {
-                    showToast("New Critical Alert", `${riskSummary.CRITICAL} trucks currently in high-risk state. Check control room.`, 'critical');
-                }
-                lastRiskCount = riskSummary.CRITICAL;
+                updateStats(stats, riskSummary);
+                updateFleetTable(fleet, riskAlerts);
+                updateMapMarkers(fleet, riskAlerts);
+                updateRiskLogs(riskAlerts);
+                updateChart(riskSummary);
+                
+                // Update Step Indicator
+                if (fleet.length > 0) document.getElementById('step2').classList.add('active');
+                if (riskAlerts.length > 0) document.getElementById('step3').classList.add('active');
 
             } catch (err) {
-                console.error("Stats fetch error:", err);
+                console.error("Critical Sync Error:", err);
             }
         }
 
-        async function updateFleet() {
-            try {
-                const response = await fetch("/fleet");
-                const data = await response.json();
-                const tableBody = document.querySelector("#fleetTable tbody");
-                
-                // Fetch risk data to color markers correctly
-                const riskData = await fetch("/risk").then(r => r.json());
-                const riskMap = {};
-                riskData.forEach(r => riskMap[r.truck_id] = r.risk_level);
+        function updateStats(stats, risk) {
+            document.getElementById("totalTrucks").innerText = stats.total_trucks || 0;
+            document.getElementById("criticalAlerts").innerText = risk.CRITICAL || 0;
+            
+            if (risk.CRITICAL > lastRiskCount) {
+                showToast("CRITICAL ALERT", "Pathway engine detected high-risk anomalies.", "critical");
+            }
+            lastRiskCount = risk.CRITICAL;
+        }
 
-                tableBody.innerHTML = "";
-                data.forEach(truck => {
-                    // Filter based on search
-                    if (currentSearchQuery && !truck.truck_id.toLowerCase().includes(currentSearchQuery.toLowerCase())) {
-                        return;
-                    }
+        function updateFleetTable(fleet, risks) {
+            const tbody = document.querySelector("#fleetTable tbody");
+            const riskMap = Object.fromEntries(risks.map(r => [r.truck_id, r]));
+            
+            tbody.innerHTML = fleet
+                .filter(t => !currentSearchQuery || t.truck_id.toLowerCase().includes(currentSearchQuery.toLowerCase()))
+                .map(truck => {
+                    const risk = riskMap[truck.truck_id];
+                    const riskLevel = risk ? risk.risk_level : 'NORMAL';
+                    let badge = "text-green-500 bg-green-500/10 border-green-500/20";
+                    if (riskLevel === 'CRITICAL') badge = "text-red-500 bg-red-500/10 border-red-500/20";
+                    if (riskLevel === 'WARNING') badge = "text-orange-500 bg-orange-500/10 border-orange-500/20";
 
-                    const status = truck.eta_minutes && truck.eta_minutes > 30 ? "DELAY" : "NORMAL";
-                    const riskLevel = riskMap[truck.truck_id] || "NORMAL";
-                    
-                    let statusBadgeClass = "bg-green-500/10 text-green-500 border-green-500/20";
-                    if (riskLevel === "CRITICAL") statusBadgeClass = "bg-red-500/10 text-red-500 border-red-500/20";
-                    else if (riskLevel === "WARNING") statusBadgeClass = "bg-orange-500/10 text-orange-500 border-orange-500/20";
-                    else if (status === "DELAY") statusBadgeClass = "bg-yellow-500/10 text-yellow-500 border-yellow-500/20";
-
-                    const row = `
-                        <tr class="hover:bg-white/5 transition-colors group">
-                            <td class="px-6 py-4 font-bold text-blue-400">
-                                <i class="fas fa-truck text-[10px] mr-2 text-gray-600 group-hover:text-blue-400"></i>
-                                ${truck.truck_id}
-                            </td>
-                            <td class="px-6 py-4 text-center font-mono text-xs text-gray-500">
-                                ${truck.lat.toFixed(4)}, ${truck.lon.toFixed(4)}
-                            </td>
-                            <td class="px-6 py-4 text-center">
-                                <span class="font-bold">${truck.speed.toFixed(1)}</span> <span class="text-[10px] text-gray-500">KM/H</span>
-                            </td>
-                            <td class="px-6 py-4 text-center">
-                                <span class="font-bold">${truck.temperature.toFixed(1)}</span> <span class="text-[10px] text-gray-500">°C</span>
-                            </td>
-                            <td class="px-6 py-4 text-center font-semibold text-gray-300">
-                                ${truck.eta_minutes ? truck.eta_minutes.toFixed(1) : "0.0"}
-                            </td>
-                            <td class="px-6 py-4 text-right">
-                                <span class="px-2 py-1 rounded-md border text-[10px] font-bold uppercase tracking-wider ${statusBadgeClass}">
-                                    ${riskLevel !== 'NORMAL' ? riskLevel : status}
+                    return `
+                        <tr class="hover:bg-blue-500/5 transition-all cursor-pointer group" onclick="focusTruck('${truck.truck_id}')">
+                            <td class="px-4 py-3 font-bold text-gray-300 group-hover:text-blue-400">${truck.truck_id}</td>
+                            <td class="px-4 py-3 text-center mono text-gray-400">${truck.speed.toFixed(1)} <span class="text-[8px] opacity-40">KM/H</span></td>
+                            <td class="px-4 py-3 text-center mono text-gray-400">${truck.temperature.toFixed(1)} <span class="text-[8px] opacity-40">°C</span></td>
+                            <td class="px-4 py-3 text-center mono font-bold text-blue-300">${truck.eta_minutes.toFixed(1)} <span class="text-[8px] opacity-40">MIN</span></td>
+                            <td class="px-4 py-3 text-right">
+                                <span class="px-2 py-0.5 rounded border text-[8px] font-black uppercase tracking-widest ${badge}">
+                                    ${riskLevel}
                                 </span>
                             </td>
                         </tr>
                     `;
-                    tableBody.innerHTML += row;
+                }).join('');
+        }
 
-                    // Update Map Marker
-                    updateMarker(truck, riskLevel);
-                });
+        function updateMapMarkers(fleet, risks) {
+            const riskMap = Object.fromEntries(risks.map(r => [r.truck_id, r.risk_level]));
+            
+            fleet.forEach(truck => {
+                if (!truck.lat || !truck.lon) return;
+                const riskLevel = riskMap[truck.truck_id] || 'NORMAL';
+                const color = riskLevel === 'CRITICAL' ? '#ef4444' : riskLevel === 'WARNING' ? '#f97316' : '#22c55e';
+                const pulse = riskLevel === 'CRITICAL' ? 'animate-pulse' : '';
 
-            } catch (err) {
-                console.error("Fleet fetch error:", err);
+                if (markers[truck.truck_id]) {
+                    markers[truck.truck_id].setLatLng([truck.lat, truck.lon]);
+                    markers[truck.truck_id].setStyle({ color, fillColor: color });
+                } else {
+                    markers[truck.truck_id] = L.circleMarker([truck.lat, truck.lon], {
+                        radius: 8, color, fillColor: color, fillOpacity: 0.8, weight: 2
+                    }).addTo(map).on('click', () => focusTruck(truck.truck_id));
+                }
+            });
+
+            // Update focused truck detail if active
+            if (selectedTruckId) {
+                const truck = fleet.find(t => t.truck_id === selectedTruckId);
+                const risk = risks.find(r => r.truck_id === selectedTruckId);
+                if (truck) updateDetailPanel(truck, risk);
             }
         }
 
-        function updateMarker(truck, riskLevel) {
-            if (!truck.lat || !truck.lon) return;
+        function updateRiskLogs(risks) {
+            const logPanel = document.getElementById("riskLogs");
+            if (risks.length === 0) {
+                logPanel.innerHTML = `<div class="text-gray-600 italic">No anomalies detected...</div>`;
+                return;
+            }
+            
+            logPanel.innerHTML = risks.map(r => `
+                <div class="flex items-start gap-2 border-b border-white/5 pb-1">
+                    <span class="text-gray-600">[${new Date().toLocaleTimeString([], {hour12:false, hour:'2-digit', minute:'2-digit'})}]</span>
+                    <span class="${r.risk_level === 'CRITICAL' ? 'text-red-500' : 'text-orange-500'} font-bold">${r.truck_id}</span>
+                    <span class="text-gray-400">Score:${r.risk_score.toFixed(1)}</span>
+                </div>
+            `).join('');
 
-            let color = "#22c55e"; // green-500
-            if (riskLevel === "CRITICAL") color = "#ef4444"; // red-500
-            else if (riskLevel === "WARNING") color = "#f97316"; // orange-500
+            // Ticker Update
+            const latest = risks[0];
+            document.getElementById('latestTickerEvent').innerHTML = `
+                <span class="${latest.risk_level === 'CRITICAL' ? 'text-red-500' : 'text-orange-500'} font-black">
+                    ${latest.risk_level} ALERT: ${latest.truck_id}
+                </span> - Pathway recomputed risk score ${latest.risk_score.toFixed(1)}
+            `;
+        }
 
-            const popupContent = `
-                <div class="p-2 min-w-[150px]">
-                    <div class="flex items-center justify-between mb-2">
-                        <span class="font-bold text-lg">${truck.truck_id}</span>
-                        <span class="text-[10px] uppercase font-bold text-gray-500">${riskLevel}</span>
-                    </div>
-                    <div class="space-y-1 text-xs">
-                        <div class="flex justify-between"><span>Speed:</span><b>${truck.speed.toFixed(1)} km/h</b></div>
-                        <div class="flex justify-between"><span>Temp:</span><b>${truck.temperature.toFixed(1)}°C</b></div>
-                        <div class="flex justify-between"><span>ETA:</span><b>${truck.eta_minutes.toFixed(1)} min</b></div>
-                    </div>
+        function updateChart(summary) {
+            const val = (summary.CRITICAL || 0) + (summary.WARNING || 0);
+            if (riskChart.data.labels.length > 20) {
+                riskChart.data.labels.shift();
+                riskChart.data.datasets[0].data.shift();
+            }
+            riskChart.data.labels.push("");
+            riskChart.data.datasets[0].data.push(val);
+            riskChart.update('none');
+        }
+
+        // Interaction Handlers
+        function focusTruck(id) {
+            selectedTruckId = id;
+            const panel = document.getElementById("truckDetail");
+            panel.classList.remove("translate-y-[120%]", "opacity-0");
+            
+            const marker = markers[id];
+            if (marker) {
+                map.setView(marker.getLatLng(), 13, { animate: true });
+                marker.openPopup();
+            }
+        }
+
+        function hideDetail() {
+            selectedTruckId = null;
+            document.getElementById("truckDetail").classList.add("translate-y-[120%]", "opacity-0");
+        }
+
+        function updateDetailPanel(truck, risk) {
+            document.getElementById("detailTruckId").innerText = truck.truck_id;
+            document.getElementById("detailSpeed").innerText = truck.speed.toFixed(1);
+            document.getElementById("detailTemp").innerText = truck.temperature.toFixed(1);
+            document.getElementById("detailEta").innerText = truck.eta_minutes.toFixed(1) + "m";
+            
+            const progress = Math.min(100, (truck.eta_minutes / 60) * 100);
+            document.getElementById("etaProgress").style.width = progress + "%";
+
+            const badge = document.getElementById("detailRiskBadge");
+            const icon = document.getElementById("detailRiskIcon");
+            const title = document.getElementById("detailRiskTitle");
+            const scoreText = document.getElementById("detailRiskScore");
+
+            const level = risk ? risk.risk_level : 'NORMAL';
+            if (level === 'CRITICAL') {
+                badge.className = "p-3 rounded-xl border border-red-500 bg-red-500/10 flex items-center gap-3";
+                icon.className = "fas fa-skull-crossbones text-red-500";
+                title.innerText = "CRITICAL ALERT";
+                title.className = "text-[10px] font-bold uppercase tracking-wider text-red-400";
+                scoreText.innerText = `Pathway Score: ${risk.risk_score.toFixed(1)} | Immediate Action Required.`;
+            } else if (level === 'WARNING') {
+                badge.className = "p-3 rounded-xl border border-orange-500 bg-orange-500/10 flex items-center gap-3";
+                icon.className = "fas fa-exclamation-triangle text-orange-500";
+                title.innerText = "WARNING DETECTED";
+                title.className = "text-[10px] font-bold uppercase tracking-wider text-orange-400";
+                scoreText.innerText = `Pathway Score: ${risk.risk_score.toFixed(1)} | Monitoring anomaly thresholds.`;
+            } else {
+                badge.className = "p-3 rounded-xl border border-green-500 bg-green-500/10 flex items-center gap-3";
+                icon.className = "fas fa-check-circle text-green-500";
+                title.innerText = "NOMINAL STATUS";
+                title.className = "text-[10px] font-bold uppercase tracking-wider text-green-400";
+                scoreText.innerText = "Streaming data indicates safe operating parameters.";
+            }
+        }
+
+        function showToast(title, msg, type) {
+            const container = document.getElementById("toastContainer");
+            const toast = document.createElement("div");
+            toast.className = `glass p-4 rounded-2xl border-l-4 ${type === 'critical' ? 'border-red-500 bg-red-500/10' : 'border-blue-500 bg-blue-500/10'} shadow-2xl animate-bounce-in flex gap-4 min-w-[300px] pointer-events-auto`;
+            toast.innerHTML = `
+                <i class="fas ${type === 'critical' ? 'fa-bolt text-red-500' : 'fa-info-circle text-blue-500'} mt-1"></i>
+                <div>
+                    <p class="text-xs font-black tracking-widest uppercase">${title}</p>
+                    <p class="text-[10px] text-gray-400">${msg}</p>
                 </div>
             `;
-
-            if (markers[truck.truck_id]) {
-                markers[truck.truck_id].setLatLng([truck.lat, truck.lon]);
-                markers[truck.truck_id].setStyle({ color: color, fillColor: color });
-                markers[truck.truck_id].getPopup().setContent(popupContent);
-            } else {
-                markers[truck.truck_id] = L.circleMarker(
-                    [truck.lat, truck.lon],
-                    {
-                        radius: 8,
-                        color: color,
-                        fillColor: color,
-                        fillOpacity: 0.8,
-                        weight: 2
-                    }
-                ).addTo(map).bindPopup(popupContent);
-            }
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-x-full', 'transition-all', 'duration-500');
+                setTimeout(() => toast.remove(), 500);
+            }, 6000);
         }
 
-        async function updateRisks() {
-            try {
-                const response = await fetch("/risk");
-                const data = await response.json();
-                const riskContent = document.getElementById("risk-content");
-
-                if (!data || data.length === 0) {
-                    riskContent.innerHTML = `
-                        <div class="flex flex-col items-center justify-center py-10 text-center">
-                            <div class="w-12 h-12 rounded-full bg-green-500/10 flex items-center justify-center text-green-500 mb-3">
-                                <i class="fas fa-check"></i>
-                            </div>
-                            <p class="text-sm font-bold text-green-400">All Systems Clear</p>
-                            <p class="text-[10px] text-gray-500 mt-1 uppercase tracking-widest">No active threats detected</p>
-                        </div>
-                    `;
-                    return;
-                }
-
-                riskContent.innerHTML = "";
-                data.forEach(risk => {
-                    const time = new Date(risk.time * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                    const isCritical = risk.risk_level === "CRITICAL";
-                    
-                    const riskDiv = document.createElement("div");
-                    riskDiv.className = `p-4 rounded-xl border flex items-center justify-between transition-all hover:scale-[1.02] ${isCritical ? 'bg-red-500/10 border-red-500/20 text-red-400' : 'bg-orange-500/10 border-orange-500/20 text-orange-400'}`;
-                    
-                    riskDiv.innerHTML = `
-                        <div class="flex items-center gap-3">
-                            <div class="w-8 h-8 rounded-lg ${isCritical ? 'bg-red-500/20' : 'bg-orange-500/20'} flex items-center justify-center">
-                                <i class="fas ${isCritical ? 'fa-bolt' : 'fa-triangle-exclamation'}"></i>
-                            </div>
-                            <div>
-                                <p class="text-xs font-bold uppercase tracking-wider">${risk.truck_id} - ${risk.risk_level}</p>
-                                <p class="text-[10px] opacity-70">Risk Score: ${risk.risk_score.toFixed(0)} | Anomaly Detected</p>
-                            </div>
-                        </div>
-                        <span class="text-[10px] font-mono font-bold opacity-60">${time}</span>
-                    `;
-                    riskContent.appendChild(riskDiv);
-                });
-
-            } catch (err) {
-                console.error("Risk fetch error:", err);
-            }
+        function toggleInsight() {
+            const el = document.getElementById("insightOverlay");
+            el.classList.toggle("hidden");
         }
 
-        /* ============================================================
-           INTERACTION HANDLERS
-           ============================================================ */
-        
-        document.getElementById("presentationToggle").addEventListener("click", () => {
-            presentationMode = !presentationMode;
-            document.body.classList.toggle("presentation-mode", presentationMode);
-            const btn = document.getElementById("presentationToggle");
-            btn.classList.toggle("bg-blue-600", presentationMode);
-            btn.classList.toggle("text-white", presentationMode);
-            
-            // Re-invalidate map size for layout shift
-            setTimeout(() => map.invalidateSize(), 300);
+        // Global Event Listeners
+        document.getElementById("presentationMode").addEventListener("click", () => {
+            isPresentationMode = !isPresentationMode;
+            document.body.classList.toggle("presentation-mode");
+            document.getElementById("presentationMode").innerHTML = isPresentationMode ? 
+                '<i class="fas fa-compress-arrows-alt mr-2"></i> Exit Focus' : 
+                '<i class="fas fa-expand-arrows-alt mr-2"></i> Focus Mode';
+            setTimeout(() => map.invalidateSize(), 400);
         });
 
         document.getElementById("truckSearch").addEventListener("input", (e) => {
             currentSearchQuery = e.target.value;
-            updateFleet(); // Trigger immediate refresh with filter
+            refreshData();
         });
 
-        /* ============================================================
-           INITIALIZATION
-           ============================================================ */
+        // Initialize Everything
         window.onload = () => {
             initMap();
             initChart();
-            
-            // Initial load
-            updateStats();
-            updateFleet();
-            updateRisks();
-
-            // Auto-refresh cycle
             setInterval(() => {
-                updateStats();
-                updateFleet();
-                updateRisks();
-            }, REFRESH_INTERVAL);
-        };
+                document.getElementById("currentTime").innerText = new Date().toLocaleTimeString([], { hour12: false });
+            }, 1000);
+            
+            refreshData();
+            setInterval(refreshData, REFRESH_RATE);
 
+            // Show insight modal on first load after 5 seconds
+            setTimeout(() => {
+                if (!localStorage.getItem('insightShown')) {
+                    toggleInsight();
+                    localStorage.setItem('insightShown', 'true');
+                }
+            }, 5000);
+        };
     </script>
 </body>
 </html>
