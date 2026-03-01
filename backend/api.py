@@ -205,3 +205,56 @@ def init_db():
 
     except Exception as e:
         return {"error": str(e)}
+    
+
+
+import random
+import threading
+import time
+
+def generate_demo_data():
+    while True:
+        try:
+            conn = get_connection()
+            cur = conn.cursor()
+
+            truck_id = f"T{random.randint(1,5)}"
+            lat = 28.5 + random.random() * 0.3
+            lon = 77.1 + random.random() * 0.3
+            dest_lat = 28.7
+            dest_lon = 77.3
+            speed = random.randint(20,80)
+            temperature = random.uniform(2,10)
+            eta = random.uniform(5,40)
+
+            cur.execute("""
+                INSERT INTO fleet_data
+                (truck_id, lat, lon, destination_lat,
+                 destination_lon, speed, temperature, eta_minutes)
+                VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
+            """, (truck_id, lat, lon, dest_lat, dest_lon,
+                  speed, temperature, eta))
+
+            risk_score = random.randint(10,80)
+            risk_level = "CRITICAL" if risk_score > 60 else "WARNING" if risk_score > 30 else "NORMAL"
+
+            if risk_level != "NORMAL":
+                cur.execute("""
+                    INSERT INTO risk_alerts
+                    (truck_id, risk_score, risk_level, time)
+                    VALUES (%s,%s,%s,EXTRACT(EPOCH FROM NOW()))
+                """, (truck_id, risk_score, risk_level))
+
+            conn.commit()
+            cur.close()
+            conn.close()
+
+        except Exception as e:
+            print("Demo Data Error:", e)
+
+        time.sleep(5)
+
+
+@app.on_event("startup")
+def start_demo_stream():
+    threading.Thread(target=generate_demo_data, daemon=True).start()
